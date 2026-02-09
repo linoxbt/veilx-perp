@@ -42,7 +42,7 @@ const FeaturesSection = () => {
             Why <span className="text-gradient">Private Perps</span>?
           </h2>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            Traditional perp DEXs expose every detail of your trading activity. ShadowPerps changes that.
+            Traditional perp DEXs expose every detail of your trading activity. VeilX changes that.
           </p>
         </div>
 

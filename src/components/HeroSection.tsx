@@ -1,12 +1,9 @@
-import { Shield, Eye, EyeOff, Lock } from "lucide-react";
+import { Eye, EyeOff, Lock } from "lucide-react";
 
 const HeroSection = () => {
   return (
     <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden pt-16">
-      {/* Grid background */}
       <div className="absolute inset-0 bg-grid opacity-30" />
-      
-      {/* Radial glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-primary/5 blur-[120px]" />
 
       <div className="container relative z-10 text-center">
@@ -31,7 +28,7 @@ const HeroSection = () => {
             href="#trade"
             className="inline-flex items-center justify-center gap-2 rounded-lg gradient-primary px-8 py-3.5 text-base font-semibold text-primary-foreground hover:opacity-90 transition-opacity glow-primary"
           >
-            <Shield className="h-4 w-4" />
+            <Eye className="h-4 w-4" />
             Start Trading
           </a>
           <a
@@ -42,7 +39,6 @@ const HeroSection = () => {
           </a>
         </div>
 
-        {/* Stats row */}
         <div className="mt-20 grid grid-cols-3 gap-8 max-w-xl mx-auto animate-slide-up" style={{ animationDelay: "0.3s" }}>
           {[
             { label: "Encrypted Orders", icon: EyeOff },

@@ -28,17 +28,6 @@ const TradingInterface = () => {
   const [leverage, setLeverage] = useState(10);
 
   return (
-    <section id="trade" className="py-24">
-      <div className="container">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Private Trading <span className="text-gradient">Terminal</span>
-          </h2>
-          <p className="text-muted-foreground max-w-lg mx-auto">
-            All order data is encrypted via Arcium MPC before reaching the matching engine.
-          </p>
-        </div>
-
         <div className="grid lg:grid-cols-[1fr_320px] gap-4 max-w-5xl mx-auto">
           {/* Main area: orderbook + positions */}
           <div className="space-y-4">
@@ -223,8 +212,6 @@ const TradingInterface = () => {
             </div>
           </div>
         </div>
-      </div>
-    </section>
   );
 };
 
