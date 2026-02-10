@@ -1,6 +1,7 @@
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import PriceChart from "@/components/PriceChart";
+import MarketSelector from "@/components/MarketSelector";
 import TradingInterface from "@/components/TradingInterface";
 import HowItWorks from "@/components/HowItWorks";
 import FeaturesSection from "@/components/FeaturesSection";
@@ -21,10 +22,13 @@ const Index = () => {
               All order data is encrypted via Arcium MPC before reaching the matching engine.
             </p>
           </div>
-          <div className="max-w-5xl mx-auto mb-6">
-            <PriceChart />
+          <div className="max-w-5xl mx-auto">
+            <MarketSelector />
+            <div className="mb-6">
+              <PriceChart />
+            </div>
+            <TradingInterface />
           </div>
-          <TradingInterface />
         </div>
       </section>
       <HowItWorks />
