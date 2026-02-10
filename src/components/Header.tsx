@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { Eye, Lock, Wallet, Menu, X } from "lucide-react";
+import { Lock, Wallet, Menu, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import veilxLogo from "@/assets/veilx-logo.png";
 
 const NAV_ITEMS = [
   { to: "/trade", label: "Trade" },
-  { to: "/markets", label: "Markets" },
   { to: "/portfolio", label: "Portfolio" },
   { to: "/docs", label: "Docs" },
 ];
@@ -18,19 +18,17 @@ const Header = () => {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
-      <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg gradient-primary">
-            <Eye className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <span className="text-xl font-bold tracking-tight">
+      <div className="container flex h-14 items-center justify-between">
+        <Link to="/" className="flex items-center gap-2.5">
+          <img src={veilxLogo} alt="VeilX" className="h-8 w-8 rounded-lg" />
+          <span className="text-lg font-bold tracking-tight">
             <span className="text-gradient">Veil</span>
             <span className="text-foreground">X</span>
           </span>
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
+        <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
           {NAV_ITEMS.map((item) => (
             <NavLink key={item.to} to={item.to} className="hover:text-foreground transition-colors" activeClassName="text-foreground">
               {item.label}
@@ -38,41 +36,39 @@ const Header = () => {
           ))}
         </nav>
 
-        <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-3 py-1.5 text-xs font-mono text-primary">
+        <div className="flex items-center gap-2.5">
+          <div className="hidden sm:flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-2.5 py-1 text-[10px] font-mono text-primary">
             <Lock className="h-3 w-3" />
             <span>Arcium Secured</span>
           </div>
 
           {connected && publicKey && (
-            <div className="hidden md:flex items-center gap-1.5 rounded-full border border-profit/30 bg-profit/10 px-3 py-1.5 text-xs font-mono text-profit">
+            <div className="hidden md:flex items-center gap-1.5 rounded-full border border-profit/30 bg-profit/10 px-2.5 py-1 text-[10px] font-mono text-profit">
               <Wallet className="h-3 w-3" />
               <span>{publicKey.toBase58().slice(0, 4)}...{publicKey.toBase58().slice(-4)}</span>
             </div>
           )}
 
-          <WalletMultiButton className="!rounded-lg !font-sans !text-sm !font-semibold !h-10" />
+          <WalletMultiButton className="!rounded-lg !font-sans !text-xs !font-semibold !h-9" />
 
-          {/* Mobile hamburger */}
           <button
-            className="md:hidden flex items-center justify-center h-10 w-10 rounded-lg border border-border text-foreground hover:bg-secondary transition-colors"
+            className="md:hidden flex items-center justify-center h-9 w-9 rounded-lg border border-border text-foreground hover:bg-secondary transition-colors"
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label="Toggle menu"
           >
-            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile menu */}
       {mobileOpen && (
         <div className="md:hidden border-t border-border bg-background/95 backdrop-blur-xl animate-fade-in">
-          <nav className="container flex flex-col gap-1 py-4">
+          <nav className="container flex flex-col gap-1 py-3">
             {NAV_ITEMS.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
-                className="px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                className="px-4 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
                 activeClassName="bg-secondary text-foreground"
                 onClick={() => setMobileOpen(false)}
               >
