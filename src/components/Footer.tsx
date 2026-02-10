@@ -11,11 +11,12 @@ const Footer = () => {
           <span className="text-xs text-muted-foreground ml-2">Built on Solana × Arcium</span>
         </div>
         <div className="flex items-center gap-6">
-          <Link to="/docs" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Documentation</Link>
-          <a href="/#features" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Features</a>
+          <Link to="/trade" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Trade</Link>
+          <Link to="/portfolio" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Portfolio</Link>
+          <Link to="/docs" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Docs</Link>
         </div>
         <p className="text-xs text-muted-foreground">
-          Private perpetual futures powered by multi-party computation. Open source.
+          Private perpetual futures powered by multi-party computation.
         </p>
       </div>
     </footer>

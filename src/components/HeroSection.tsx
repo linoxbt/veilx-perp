@@ -1,4 +1,5 @@
 import { Eye, EyeOff, Lock } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const HeroSection = () => {
   return (
@@ -24,13 +25,13 @@ const HeroSection = () => {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up" style={{ animationDelay: "0.2s" }}>
-          <a
-            href="#trade"
+          <Link
+            to="/trade"
             className="inline-flex items-center justify-center gap-2 rounded-lg gradient-primary px-8 py-3.5 text-base font-semibold text-primary-foreground hover:opacity-90 transition-opacity glow-primary"
           >
             <Eye className="h-4 w-4" />
             Start Trading
-          </a>
+          </Link>
           <a
             href="#how-it-works"
             className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-8 py-3.5 text-base font-semibold text-foreground hover:bg-secondary transition-colors"
