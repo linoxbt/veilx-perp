@@ -1,11 +1,20 @@
-import { Eye, Lock, Wallet } from "lucide-react";
+import { useState } from "react";
+import { Eye, Lock, Wallet, Menu, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 
+const NAV_ITEMS = [
+  { to: "/trade", label: "Trade" },
+  { to: "/markets", label: "Markets" },
+  { to: "/portfolio", label: "Portfolio" },
+  { to: "/docs", label: "Docs" },
+];
+
 const Header = () => {
   const { connected, publicKey } = useWallet();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
@@ -20,10 +29,13 @@ const Header = () => {
           </span>
         </Link>
 
+        {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
-          <NavLink to="/trade" className="hover:text-foreground transition-colors" activeClassName="text-foreground">Trade</NavLink>
-          <NavLink to="/portfolio" className="hover:text-foreground transition-colors" activeClassName="text-foreground">Portfolio</NavLink>
-          <NavLink to="/docs" className="hover:text-foreground transition-colors" activeClassName="text-foreground">Docs</NavLink>
+          {NAV_ITEMS.map((item) => (
+            <NavLink key={item.to} to={item.to} className="hover:text-foreground transition-colors" activeClassName="text-foreground">
+              {item.label}
+            </NavLink>
+          ))}
         </nav>
 
         <div className="flex items-center gap-3">
@@ -40,8 +52,36 @@ const Header = () => {
           )}
 
           <WalletMultiButton className="!rounded-lg !font-sans !text-sm !font-semibold !h-10" />
+
+          {/* Mobile hamburger */}
+          <button
+            className="md:hidden flex items-center justify-center h-10 w-10 rounded-lg border border-border text-foreground hover:bg-secondary transition-colors"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label="Toggle menu"
+          >
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
         </div>
       </div>
+
+      {/* Mobile menu */}
+      {mobileOpen && (
+        <div className="md:hidden border-t border-border bg-background/95 backdrop-blur-xl animate-fade-in">
+          <nav className="container flex flex-col gap-1 py-4">
+            {NAV_ITEMS.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className="px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                activeClassName="bg-secondary text-foreground"
+                onClick={() => setMobileOpen(false)}
+              >
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
+        </div>
+      )}
     </header>
   );
 };
