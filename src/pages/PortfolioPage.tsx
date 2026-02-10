@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import TradeHistory from "@/components/TradeHistory";
+import AnimatedNumber from "@/components/AnimatedNumber";
 import {
   ShieldCheck,
   Wallet,
@@ -9,7 +10,6 @@ import {
   TrendingDown,
   ArrowUpRight,
   BarChart3,
-  Clock,
   History,
   Lock,
   Eye,
@@ -17,8 +17,8 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const MOCK_POSITIONS = [
-  { market: "SOL-PERP", side: "Long", size: "150.0", entry: "$148.32", mark: "$150.10", pnl: "+$245.80", pnlPct: "+1.1%", leverage: "10x", liqPrice: "$133.49" },
-  { market: "ETH-PERP", side: "Short", size: "5.2", entry: "$2,351.40", mark: "$2,367.20", pnl: "-$82.10", pnlPct: "-0.7%", leverage: "5x", liqPrice: "$2,822.00" },
+  { market: "SOL-PERP", side: "Long", size: "150.0", entry: "$148.32", mark: "$150.10", pnl: 245.8, pnlPct: 1.1, leverage: "10x", liqPrice: "$133.49" },
+  { market: "ETH-PERP", side: "Short", size: "5.2", entry: "$2,351.40", mark: "$2,367.20", pnl: -82.1, pnlPct: -0.7, leverage: "5x", liqPrice: "$2,822.00" },
 ];
 
 const MOCK_BALANCES = [
@@ -27,22 +27,64 @@ const MOCK_BALANCES = [
   { asset: "ETH", free: "2.1", locked: "5.2", total: "7.3" },
 ];
 
-const StatCard = ({ label, value, sub, icon: Icon, trend }: { label: string; value: string; sub?: string; icon: any; trend?: "up" | "down" }) => (
+// Simulate live PnL ticks
+function useSimulatedPnL() {
+  const [accountValue, setAccountValue] = useState(18920.4);
+  const [unrealizedPnl, setUnrealizedPnl] = useState(163.7);
+  const [todayPnl, setTodayPnl] = useState(412.3);
+  const [positions, setPositions] = useState(MOCK_POSITIONS);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const drift = () => (Math.random() - 0.48) * 15;
+      setAccountValue((v) => v + drift());
+      setUnrealizedPnl((v) => v + drift() * 0.4);
+      setTodayPnl((v) => v + drift() * 0.3);
+      setPositions((prev) =>
+        prev.map((p) => ({
+          ...p,
+          pnl: p.pnl + (Math.random() - 0.48) * 8,
+          pnlPct: p.pnlPct + (Math.random() - 0.48) * 0.1,
+        }))
+      );
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return { accountValue, unrealizedPnl, todayPnl, positions };
+}
+
+const StatCard = ({
+  label,
+  value,
+  prefix,
+  suffix,
+  decimals,
+  icon: Icon,
+  trend,
+}: {
+  label: string;
+  value: number;
+  prefix?: string;
+  suffix?: string;
+  decimals?: number;
+  icon: any;
+  trend?: "up" | "down";
+}) => (
   <div className="rounded-xl border border-border bg-card p-5">
     <div className="flex items-center justify-between mb-3">
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
       <Icon className="h-4 w-4 text-muted-foreground" />
     </div>
-    <div className="text-2xl font-bold font-mono text-foreground">{value}</div>
-    {sub && (
-      <div className={`text-xs font-mono mt-1 ${trend === "up" ? "text-profit" : trend === "down" ? "text-loss" : "text-muted-foreground"}`}>
-        {sub}
-      </div>
-    )}
+    <div className="text-2xl font-bold font-mono text-foreground">
+      <AnimatedNumber value={value} prefix={prefix} suffix={suffix} decimals={decimals} />
+    </div>
   </div>
 );
 
 const PortfolioPage = () => {
+  const { accountValue, unrealizedPnl, todayPnl, positions } = useSimulatedPnL();
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -71,13 +113,13 @@ const PortfolioPage = () => {
 
           {/* Stats grid */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <StatCard label="Account Value" value="$18,920.40" sub="+$412.30 today" icon={Wallet} trend="up" />
-            <StatCard label="Unrealized PnL" value="+$163.70" sub="+0.87%" icon={TrendingUp} trend="up" />
-            <StatCard label="Today's PnL" value="+$412.30" sub="5 trades" icon={BarChart3} trend="up" />
-            <StatCard label="Open Positions" value="2" sub="$6,420 margin used" icon={Eye} />
+            <StatCard label="Account Value" value={accountValue} prefix="$" icon={Wallet} trend="up" />
+            <StatCard label="Unrealized PnL" value={unrealizedPnl} prefix={unrealizedPnl >= 0 ? "+$" : "-$"} icon={TrendingUp} trend={unrealizedPnl >= 0 ? "up" : "down"} />
+            <StatCard label="Today's PnL" value={todayPnl} prefix={todayPnl >= 0 ? "+$" : "-$"} icon={BarChart3} trend={todayPnl >= 0 ? "up" : "down"} />
+            <StatCard label="Open Positions" value={positions.length} prefix="" suffix="" decimals={0} icon={Eye} />
           </div>
 
-          {/* Tabs: Positions / History / Balances */}
+          {/* Tabs */}
           <div className="rounded-xl border border-border bg-card p-5">
             <Tabs defaultValue="positions">
               <TabsList className="bg-muted w-full justify-start mb-4">
@@ -111,7 +153,7 @@ const PortfolioPage = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {MOCK_POSITIONS.map((pos, i) => (
+                      {positions.map((pos, i) => (
                         <tr key={i} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                           <td className="py-3 text-foreground font-semibold">{pos.market}</td>
                           <td className={`py-3 ${pos.side === "Long" ? "text-profit" : "text-loss"}`}>
@@ -125,8 +167,15 @@ const PortfolioPage = () => {
                           <td className="py-3 text-right text-secondary-foreground">{pos.mark}</td>
                           <td className="py-3 text-right text-primary">{pos.leverage}</td>
                           <td className="py-3 text-right text-warning">{pos.liqPrice}</td>
-                          <td className={`py-3 text-right font-semibold ${pos.pnl.startsWith("+") ? "text-profit" : "text-loss"}`}>
-                            {pos.pnl} <span className="text-muted-foreground">{pos.pnlPct}</span>
+                          <td className="py-3 text-right font-semibold">
+                            <AnimatedNumber
+                              value={Math.abs(pos.pnl)}
+                              prefix={pos.pnl >= 0 ? "+$" : "-$"}
+                              className={pos.pnl >= 0 ? "text-profit" : "text-loss"}
+                            />
+                            <span className="text-muted-foreground ml-1">
+                              {pos.pnlPct >= 0 ? "+" : ""}{pos.pnlPct.toFixed(1)}%
+                            </span>
                           </td>
                         </tr>
                       ))}
