@@ -6,7 +6,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import WalletProvider from "@/components/WalletProvider";
 import Index from "./pages/Index";
 import TradePage from "./pages/TradePage";
-import MarketsPage from "./pages/MarketsPage";
 import PortfolioPage from "./pages/PortfolioPage";
 import DocsPage from "./pages/DocsPage";
 import NotFound from "./pages/NotFound";
@@ -23,7 +22,6 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/trade" element={<TradePage />} />
-            <Route path="/markets" element={<MarketsPage />} />
             <Route path="/portfolio" element={<PortfolioPage />} />
             <Route path="/docs" element={<DocsPage />} />
             <Route path="*" element={<NotFound />} />
