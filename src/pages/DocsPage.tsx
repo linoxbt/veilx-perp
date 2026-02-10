@@ -674,119 +674,150 @@ pub enum LiquidationError {
 
 const DeploymentTab = () => (
   <>
-    <DocSection title="Deployment Guide">
-      <p>Follow these steps to deploy VeilX to Solana devnet/mainnet. Prerequisites: Rust, Solana CLI, Anchor CLI, and Node.js.</p>
+    <DocSection title="Deployment Guide — Solana Playground">
+      <p>
+        <strong className="text-foreground">Solana Playground</strong> (<a href="https://beta.solpg.io" target="_blank" rel="noopener noreferrer" className="text-primary underline">beta.solpg.io</a>) lets you compile and deploy Anchor programs entirely in the browser — no local toolchain needed. Follow these steps to deploy all 3 VeilX contracts to devnet.
+      </p>
     </DocSection>
 
-    <h3 className="text-lg font-semibold text-foreground mb-3">Step 1: Environment Setup</h3>
-    <CodeBlock title="Terminal" language="bash" code={`# Install Solana CLI
-sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"
+    {/* ── STEP 1 ── */}
+    <h3 className="text-lg font-semibold text-foreground mb-3">Step 1 — Open Solana Playground & Create a Wallet</h3>
+    <div className="text-sm text-muted-foreground space-y-2 mb-4">
+      <p>1. Go to <a href="https://beta.solpg.io" target="_blank" rel="noopener noreferrer" className="text-primary underline">beta.solpg.io</a>.</p>
+      <p>2. Click the <strong className="text-foreground">wallet icon</strong> (bottom-left) → "Create a new wallet". This generates a browser keypair.</p>
+      <p>3. Make sure <strong className="text-foreground">Devnet</strong> is selected in the cluster dropdown (bottom bar).</p>
+      <p>4. Click <strong className="text-foreground">"Airdrop"</strong> to get free devnet SOL (≈5 SOL recommended).</p>
+    </div>
 
-# Install Anchor CLI
-cargo install --git https://github.com/coral-xyz/anchor avm --locked
-avm install latest && avm use latest
+    {/* ── STEP 2 ── */}
+    <h3 className="text-lg font-semibold text-foreground mb-3 mt-6">Step 2 — Deploy veilx-core</h3>
+    <div className="text-sm text-muted-foreground space-y-2 mb-4">
+      <p>1. Click <strong className="text-foreground">"Create a new project"</strong> → name it <code className="text-primary bg-muted px-1 rounded">veilx-core</code> → select <strong className="text-foreground">Anchor (Rust)</strong>.</p>
+      <p>2. Replace the contents of <code className="text-primary bg-muted px-1 rounded">src/lib.rs</code> with the <strong className="text-foreground">VeilX Core Program</strong> code from the Smart Contracts tab.</p>
+      <p>3. Click <strong className="text-foreground">"Build"</strong> (hammer icon) — wait for compilation.</p>
+      <p>4. Click <strong className="text-foreground">"Deploy"</strong> — Playground will deploy to devnet and display the <strong className="text-foreground">Program ID</strong>.</p>
+      <p>5. <strong className="text-profit">Copy the Program ID</strong> — you'll need this later.</p>
+    </div>
+    <CodeBlock title="Expected output" language="text" code={`Building...
+Build successful. Completed in 12.3s.
 
-# Create keypair (if needed)
-solana-keygen new
+Deploying...
+Program deployed to: 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
+Deploy successful.`} />
 
-# Set to devnet
-solana config set --url devnet
+    {/* ── STEP 3 ── */}
+    <h3 className="text-lg font-semibold text-foreground mb-3 mt-6">Step 3 — Deploy veilx-mpc-bridge</h3>
+    <div className="text-sm text-muted-foreground space-y-2 mb-4">
+      <p>1. Create another new project → name it <code className="text-primary bg-muted px-1 rounded">veilx-mpc-bridge</code>.</p>
+      <p>2. Paste the <strong className="text-foreground">MPC Bridge Program</strong> code into <code className="text-primary bg-muted px-1 rounded">src/lib.rs</code>.</p>
+      <p>3. <strong className="text-foreground">Build → Deploy</strong>. Copy the Program ID.</p>
+    </div>
 
-# Airdrop SOL for deployment
-solana airdrop 5`} />
+    {/* ── STEP 4 ── */}
+    <h3 className="text-lg font-semibold text-foreground mb-3 mt-6">Step 4 — Deploy veilx-liquidation</h3>
+    <div className="text-sm text-muted-foreground space-y-2 mb-4">
+      <p>1. Create a third project → <code className="text-primary bg-muted px-1 rounded">veilx-liquidation</code>.</p>
+      <p>2. Paste the <strong className="text-foreground">Liquidation Engine</strong> code → <strong className="text-foreground">Build → Deploy</strong>.</p>
+      <p>3. Copy the Program ID.</p>
+    </div>
 
-    <h3 className="text-lg font-semibold text-foreground mb-3 mt-6">Step 2: Clone & Build</h3>
-    <CodeBlock title="Terminal" language="bash" code={`# Clone the VeilX repository
-git clone https://github.com/your-org/veilx-protocol.git
-cd veilx-protocol
+    <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 mb-6 text-sm">
+      <p className="text-primary font-semibold mb-1">📋 After deploying all 3 programs, you should have:</p>
+      <ul className="text-muted-foreground space-y-1 ml-4">
+        <li>• <code className="text-primary bg-muted px-1 rounded">VEILX_CORE_PROGRAM_ID</code></li>
+        <li>• <code className="text-primary bg-muted px-1 rounded">VEILX_MPC_BRIDGE_PROGRAM_ID</code></li>
+        <li>• <code className="text-primary bg-muted px-1 rounded">VEILX_LIQUIDATION_PROGRAM_ID</code></li>
+      </ul>
+    </div>
 
-# Install dependencies
-yarn install
-
-# Build all programs
-anchor build
-
-# Get program IDs (update declare_id! in each lib.rs)
-solana address -k target/deploy/veilx_core-keypair.json
-solana address -k target/deploy/veilx_mpc_bridge-keypair.json
-solana address -k target/deploy/veilx_liquidation-keypair.json`} />
-
-    <h3 className="text-lg font-semibold text-foreground mb-3 mt-6">Step 3: Configure Arcium MPC</h3>
-    <CodeBlock title="Terminal" language="bash" code={`# Install Arcium CLI
+    {/* ── STEP 5 — Arcium ── */}
+    <h3 className="text-lg font-semibold text-foreground mb-3 mt-6">Step 5 — Set Up Arcium MPC Bridge</h3>
+    <div className="text-sm text-muted-foreground space-y-2 mb-4">
+      <p>The Arcium MPC network requires CLI setup (cannot be done fully in-browser). You'll need a terminal — either on desktop or via a mobile SSH app like <strong className="text-foreground">Termius</strong> connected to a cloud VM.</p>
+    </div>
+    <CodeBlock title="Terminal (desktop or SSH)" language="bash" code={`# 1. Install Arcium CLI
 npm install -g @arcium/cli
 
-# Initialize Arcium config for your project
+# 2. Initialize for your project
 arcium init --network devnet
 
-# Register MPC nodes (minimum 3 for threshold security)
+# 3. Register MPC compute nodes (minimum 3 for 3-of-5 threshold)
+#    Arcium provides shared devnet nodes — or run your own
 arcium node register --pubkey <NODE_1_PUBKEY> --encryption-key <KEY_1>
 arcium node register --pubkey <NODE_2_PUBKEY> --encryption-key <KEY_2>
 arcium node register --pubkey <NODE_3_PUBKEY> --encryption-key <KEY_3>
 
-# Set threshold (3-of-5)
-arcium config set-threshold 3`} />
+# 4. Link the MPC bridge to your deployed bridge program
+arcium link-program --program-id <VEILX_MPC_BRIDGE_PROGRAM_ID>
 
-    <h3 className="text-lg font-semibold text-foreground mb-3 mt-6">Step 4: Deploy Programs</h3>
-    <CodeBlock title="Terminal" language="bash" code={`# Deploy to devnet
-anchor deploy --provider.cluster devnet
+# 5. Verify cluster is active
+arcium status`} />
 
-# Initialize the core market (SOL-PERP)
-anchor run initialize-market -- \\
-  --oracle <PYTH_SOL_USD_FEED> \\
-  --symbol SOL \\
-  --max-leverage 50 \\
-  --maintenance-margin 500 \\
-  --taker-fee 10 \\
-  --maker-fee 5
+    <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 mb-6 text-sm">
+      <p className="text-primary font-semibold mb-1">💡 Using Arcium Shared Devnet Nodes</p>
+      <p className="text-muted-foreground">For devnet testing, Arcium provides pre-registered shared MPC nodes. Run <code className="text-primary bg-muted px-1 rounded">arcium devnet setup</code> to auto-configure a 3-of-5 cluster without manually registering nodes.</p>
+    </div>
 
-# Initialize MPC bridge
-anchor run initialize-bridge -- \\
-  --threshold 3 \\
-  --node-count 5
+    {/* ── STEP 6 — Pyth Oracle ── */}
+    <h3 className="text-lg font-semibold text-foreground mb-3 mt-6">Step 6 — Connect Pyth Price Oracles</h3>
+    <div className="text-sm text-muted-foreground space-y-2 mb-4">
+      <p>VeilX uses <strong className="text-foreground">Pyth Network</strong> price feeds for mark prices. Use the Solana Playground test explorer to call <code className="text-primary bg-muted px-1 rounded">initialize_market</code> with the correct Pyth feed addresses:</p>
+    </div>
+    <CodeBlock title="Pyth Devnet Feed Addresses" language="text" code={`SOL/USD: H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG
+ETH/USD: JBu1AL4obBcCMqKBBxhpWCNUt136ijcuMZLFvTP7iWdB
+BTC/USD: GVXRSBjFk6e6J3NbVPXohDJwFP7skkZNhMhSsMFoMJFi
+ARB/USD: 4mRGHzjGerQNWLXJJBfNKFsViFBHxRGFLFmAjGMaSBZE`} />
 
-# Initialize liquidation engine
-anchor run initialize-liquidation -- \\
-  --fee 50 \\
-  --insurance-share 50`} />
+    <div className="text-sm text-muted-foreground space-y-2 mb-4">
+      <p>In Solana Playground's test tab, call <code className="text-primary bg-muted px-1 rounded">initializeMarket</code> for each trading pair. Pass the Pyth feed public key as the <code className="text-primary bg-muted px-1 rounded">oracle</code> parameter.</p>
+    </div>
 
-    <h3 className="text-lg font-semibold text-foreground mb-3 mt-6">Step 5: Integrate Pyth Oracle</h3>
-    <CodeBlock title="scripts/setup-oracle.ts" language="TypeScript" code={`import { Connection, PublicKey } from "@solana/web3.js";
-import { PythHttpClient, getPythProgramKeyForCluster } from "@pythnetwork/client";
-
-const PYTH_FEEDS = {
-  "SOL/USD": new PublicKey("H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG"),
-  "ETH/USD": new PublicKey("JBu1AL4obBcCMqKBBxhpWCNUt136ijcuMZLFvTP7iWdB"),
-  "BTC/USD": new PublicKey("GVXRSBjFk6e6J3NbVPXohDJwFP7skkZNhMhSsMFoMJFi"),
+    {/* ── STEP 7 — Configure Frontend ── */}
+    <h3 className="text-lg font-semibold text-foreground mb-3 mt-6">Step 7 — Configure the VeilX Frontend</h3>
+    <div className="text-sm text-muted-foreground space-y-2 mb-4">
+      <p>After deployment, provide the following values to wire the UI to your on-chain programs:</p>
+    </div>
+    <CodeBlock title="src/config/programs.ts" language="TypeScript" code={`// Paste your deployed program IDs here
+export const PROGRAM_IDS = {
+  VEILX_CORE: "<your-veilx-core-program-id>",
+  VEILX_MPC_BRIDGE: "<your-veilx-mpc-bridge-program-id>",
+  VEILX_LIQUIDATION: "<your-veilx-liquidation-program-id>",
 };
 
-async function setupOracles() {
-  const connection = new Connection("https://api.devnet.solana.com");
-  const pythClient = new PythHttpClient(
-    connection,
-    getPythProgramKeyForCluster("devnet")
-  );
-  
-  const data = await pythClient.getData();
-  
-  for (const [pair, feed] of Object.entries(PYTH_FEEDS)) {
-    const price = data.productPrice.get(pair);
-    console.log(\`\${pair}: $\${price?.price ?? "N/A"}\`);
-  }
-}
+// Arcium MPC cluster config
+export const ARCIUM_CONFIG = {
+  CLUSTER_ID: "<your-arcium-cluster-id>",
+  NETWORK: "devnet",
+};
 
-setupOracles();`} />
+// Solana RPC (default devnet, or your custom RPC)
+export const RPC_ENDPOINT = "https://api.devnet.solana.com";
 
-    <h3 className="text-lg font-semibold text-foreground mb-3 mt-6">Step 6: Verify Deployment</h3>
-    <CodeBlock title="Terminal" language="bash" code={`# Run test suite
-anchor test
+// Pyth feed addresses
+export const PYTH_FEEDS = {
+  "SOL/USD": "H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG",
+  "ETH/USD": "JBu1AL4obBcCMqKBBxhpWCNUt136ijcuMZLFvTP7iWdB",
+  "BTC/USD": "GVXRSBjFk6e6J3NbVPXohDJwFP7skkZNhMhSsMFoMJFi",
+  "ARB/USD": "4mRGHzjGerQNWLXJJBfNKFsViFBHxRGFLFmAjGMaSBZE",
+};`} />
 
-# Verify programs on Solana Explorer
-solana program show <VEILX_CORE_PROGRAM_ID>
-solana program show <VEILX_MPC_BRIDGE_PROGRAM_ID>
-solana program show <VEILX_LIQUIDATION_PROGRAM_ID>
+    {/* ── STEP 8 — Verify ── */}
+    <h3 className="text-lg font-semibold text-foreground mb-3 mt-6">Step 8 — Verify Everything Works</h3>
+    <div className="text-sm text-muted-foreground space-y-2 mb-4">
+      <p>1. Open <a href="https://explorer.solana.com/?cluster=devnet" target="_blank" rel="noopener noreferrer" className="text-primary underline">Solana Explorer (devnet)</a> and search each Program ID — confirm they show as deployed.</p>
+      <p>2. Run <code className="text-primary bg-muted px-1 rounded">arcium status</code> to confirm MPC cluster is active.</p>
+      <p>3. Connect your Phantom/Solflare wallet to the VeilX frontend and verify the wallet connects.</p>
+      <p>4. Share the 3 Program IDs + Arcium Cluster ID with the frontend to complete integration.</p>
+    </div>
 
-# Test encrypted order submission
-anchor run test-encrypted-order`} />
+    <div className="rounded-xl border border-profit/30 bg-profit/5 p-4 text-sm">
+      <p className="text-profit font-semibold mb-1">✅ Summary: What You Need After Deployment</p>
+      <ul className="text-muted-foreground space-y-1 ml-4">
+        <li>• <strong className="text-foreground">3 Program IDs</strong> — from Solana Playground deploys</li>
+        <li>• <strong className="text-foreground">Arcium Cluster ID</strong> — from <code className="text-primary bg-muted px-1 rounded">arcium status</code></li>
+        <li>• <strong className="text-foreground">RPC endpoint</strong> — devnet default or custom</li>
+      </ul>
+    </div>
   </>
 );
 
