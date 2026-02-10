@@ -1,5 +1,6 @@
 import { Eye, Lock, Wallet } from "lucide-react";
 import { Link } from "react-router-dom";
+import { NavLink } from "@/components/NavLink";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 
@@ -20,10 +21,9 @@ const Header = () => {
         </Link>
 
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
-          <a href="/#trade" className="hover:text-foreground transition-colors">Trade</a>
-          <a href="/#how-it-works" className="hover:text-foreground transition-colors">How It Works</a>
-          <a href="/#features" className="hover:text-foreground transition-colors">Features</a>
-          <Link to="/docs" className="hover:text-foreground transition-colors">Docs</Link>
+          <NavLink to="/trade" className="hover:text-foreground transition-colors" activeClassName="text-foreground">Trade</NavLink>
+          <NavLink to="/portfolio" className="hover:text-foreground transition-colors" activeClassName="text-foreground">Portfolio</NavLink>
+          <NavLink to="/docs" className="hover:text-foreground transition-colors" activeClassName="text-foreground">Docs</NavLink>
         </nav>
 
         <div className="flex items-center gap-3">
