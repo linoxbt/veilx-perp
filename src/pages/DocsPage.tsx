@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { Copy, Check } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Eye, ArrowLeft, FileCode, Shield, Layers, Rocket, Lock, Server, BookOpen } from "lucide-react";
 
@@ -81,15 +82,35 @@ const DocSection = ({ title, children }: { title: string; children: React.ReactN
   </div>
 );
 
-const CodeBlock = ({ title, language, code }: { title: string; language: string; code: string }) => (
-  <div className="rounded-xl border border-border bg-muted overflow-hidden mb-4">
-    <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-secondary/50">
-      <span className="text-xs font-mono text-muted-foreground">{title}</span>
-      <span className="text-[10px] font-mono text-primary">{language}</span>
+const CodeBlock = ({ title, language, code }: { title: string; language: string; code: string }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(code).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [code]);
+
+  return (
+    <div className="rounded-xl border border-border bg-muted overflow-hidden mb-4">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-secondary/50">
+        <span className="text-xs font-mono text-muted-foreground">{title}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-mono text-primary">{language}</span>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-colors bg-background/50 hover:bg-background border border-border text-muted-foreground hover:text-foreground"
+          >
+            {copied ? <Check className="h-3 w-3 text-profit" /> : <Copy className="h-3 w-3" />}
+            {copied ? "Copied!" : "Copy"}
+          </button>
+        </div>
+      </div>
+      <pre className="p-4 text-xs font-mono text-foreground overflow-x-auto whitespace-pre">{code}</pre>
     </div>
-    <pre className="p-4 text-xs font-mono text-foreground overflow-x-auto whitespace-pre">{code}</pre>
-  </div>
-);
+  );
+};
 
 /* ========== TAB CONTENT ========== */
 
