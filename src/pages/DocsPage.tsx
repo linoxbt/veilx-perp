@@ -205,7 +205,7 @@ const ContractsTab = () => (
       code={`use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 
-declare_id!("VeiLXCoreXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+declare_id!("DLkXTKQVx422rBrSPJDdZdrJYsYXEnCuGLoucr2Bixnb");
 
 #[program]
 pub mod veilx_core {

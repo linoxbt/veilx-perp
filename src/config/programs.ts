@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════
 
 export const PROGRAM_IDS = {
-  VEILX_CORE: "<your-veilx-core-program-id>",
+  VEILX_CORE: "DLkXTKQVx422rBrSPJDdZdrJYsYXEnCuGLoucr2Bixnb",
   VEILX_MPC_BRIDGE: "<your-veilx-mpc-bridge-program-id>",
   VEILX_LIQUIDATION: "<your-veilx-liquidation-program-id>",
 };
