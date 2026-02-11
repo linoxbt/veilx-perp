@@ -943,7 +943,7 @@ arcium node register --pubkey <NODE_2_PUBKEY> --encryption-key <KEY_2>
 arcium node register --pubkey <NODE_3_PUBKEY> --encryption-key <KEY_3>
 
 # 4. Link the MPC bridge to your deployed bridge program
-arcium link-program --program-id <VEILX_MPC_BRIDGE_PROGRAM_ID>
+arcium link-program --program-id DooxjY3g8Xn1PZTSd852aKdnA39HvmpSubphAP2VLYks
 
 # 5. Verify cluster is active
 arcium status`} />
@@ -974,9 +974,9 @@ ARB/USD: 4mRGHzjGerQNWLXJJBfNKFsViFBHxRGFLFmAjGMaSBZE`} />
     </div>
     <CodeBlock title="src/config/programs.ts" language="TypeScript" code={`// Paste your deployed program IDs here
 export const PROGRAM_IDS = {
-  VEILX_CORE: "<your-veilx-core-program-id>",
-  VEILX_MPC_BRIDGE: "<your-veilx-mpc-bridge-program-id>",
-  VEILX_LIQUIDATION: "<your-veilx-liquidation-program-id>",
+  VEILX_CORE: "DLkXTKQVx422rBrSPJDdZdrJYsYXEnCuGLoucr2Bixnb",
+  VEILX_MPC_BRIDGE: "DooxjY3g8Xn1PZTSd852aKdnA39HvmpSubphAP2VLYks",
+  VEILX_LIQUIDATION: "Fq4LqoHrk1Ru7oQZ1UaF4bV2njt3VYt4Qikrkrf318eW",
 };
 
 // Arcium MPC cluster config
