@@ -182,7 +182,7 @@ const ContractsTab = () => (
       title="programs/veilx-core/src/lib.rs"
       language="Rust (Anchor)"
       code={`use anchor_lang::prelude::*;
-use arcium_sdk::prelude::*;
+use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 
 declare_id!("VeiLXCoreXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
 
@@ -214,16 +214,15 @@ pub mod veilx_core {
         ctx: Context<DepositCollateral>,
         amount: u64,
     ) -> Result<()> {
-        // Transfer USDC from user to vault
         let cpi_ctx = CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
-            anchor_spl::token::Transfer {
+            Transfer {
                 from: ctx.accounts.user_token.to_account_info(),
                 to: ctx.accounts.vault.to_account_info(),
                 authority: ctx.accounts.user.to_account_info(),
             },
         );
-        anchor_spl::token::transfer(cpi_ctx, amount)?;
+        token::transfer(cpi_ctx, amount)?;
 
         let user_account = &mut ctx.accounts.user_account;
         user_account.collateral += amount;
@@ -237,10 +236,7 @@ pub mod veilx_core {
     ) -> Result<()> {
         // Validate the MPC proof
         require!(
-            arcium_sdk::verify_mpc_proof(
-                &encrypted_order.proof,
-                &ctx.accounts.arcium_config.key(),
-            ),
+            verify_mpc_proof(&encrypted_order.proof),
             VeilXError::InvalidMpcProof
         );
 
@@ -264,7 +260,6 @@ pub mod veilx_core {
             VeilXError::UnauthorizedMpc
         );
 
-        // Update encrypted positions for both parties
         let long_position = &mut ctx.accounts.long_position;
         long_position.encrypted_entry = settlement.encrypted_long_entry;
         long_position.encrypted_size = settlement.encrypted_long_size;
@@ -273,7 +268,6 @@ pub mod veilx_core {
         short_position.encrypted_entry = settlement.encrypted_short_entry;
         short_position.encrypted_size = settlement.encrypted_short_size;
 
-        // Only PnL is revealed on close
         Ok(())
     }
 
@@ -283,9 +277,8 @@ pub mod veilx_core {
         revealed_pnl: i64,
         pnl_proof: Vec<u8>,
     ) -> Result<()> {
-        // Verify the PnL proof from MPC
         require!(
-            arcium_sdk::verify_pnl_proof(
+            verify_pnl_proof(
                 &pnl_proof,
                 revealed_pnl,
                 &ctx.accounts.position.encrypted_entry,
@@ -303,10 +296,94 @@ pub mod veilx_core {
                 .ok_or(VeilXError::InsufficientCollateral)?;
         }
 
-        // Close the position account
         ctx.accounts.position.close(ctx.accounts.user.to_account_info())?;
         Ok(())
     }
+}
+
+/* ── MPC proof verification stubs ─────────────── */
+/* Replace with real Arcium SDK calls once the     */
+/* arcium-sdk crate is published to crates.io      */
+
+fn verify_mpc_proof(proof: &[u8]) -> bool {
+    // TODO: Replace with arcium_sdk::verify_mpc_proof()
+    // once the Arcium Rust SDK is publicly available.
+    // For devnet testing, accepts any non-empty proof.
+    !proof.is_empty()
+}
+
+fn verify_pnl_proof(
+    proof: &[u8],
+    _revealed_pnl: i64,
+    _encrypted_entry: &[u8],
+    _encrypted_size: &[u8],
+) -> bool {
+    // TODO: Replace with arcium_sdk::verify_pnl_proof()
+    !proof.is_empty()
+}
+
+/* ── Account validation structs ───────────────── */
+
+#[derive(Accounts)]
+pub struct InitializeMarket<'info> {
+    #[account(
+        init,
+        payer = authority,
+        space = 8 + std::mem::size_of::<Market>(),
+        seeds = [b"market", authority.key().as_ref()],
+        bump
+    )]
+    pub market: Account<'info, Market>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct DepositCollateral<'info> {
+    #[account(mut, seeds = [b"user", user.key().as_ref()], bump)]
+    pub user_account: Account<'info, UserAccount>,
+    #[account(mut)]
+    pub user_token: Account<'info, TokenAccount>,
+    #[account(mut)]
+    pub vault: Account<'info, TokenAccount>,
+    #[account(mut)]
+    pub user: Signer<'info>,
+    pub token_program: Program<'info, Token>,
+}
+
+#[derive(Accounts)]
+pub struct SubmitOrder<'info> {
+    #[account(
+        init,
+        payer = user,
+        space = 8 + 32 + 32 + 4 + 256 + 4 + 128 + 8 + 1
+    )]
+    pub order: Account<'info, Order>,
+    pub market: Account<'info, Market>,
+    #[account(mut)]
+    pub user: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct SettleTrade<'info> {
+    pub market: Account<'info, Market>,
+    #[account(mut)]
+    pub long_position: Account<'info, Position>,
+    #[account(mut)]
+    pub short_position: Account<'info, Position>,
+    pub mpc_authority: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct ClosePosition<'info> {
+    #[account(mut, has_one = user)]
+    pub position: Account<'info, Position>,
+    #[account(mut, seeds = [b"user", user.key().as_ref()], bump)]
+    pub user_account: Account<'info, UserAccount>,
+    #[account(mut)]
+    pub user: Signer<'info>,
 }
 
 /* ── Account structs ──────────────────────────── */
@@ -409,7 +486,6 @@ pub enum VeilXError {
       title="programs/veilx-mpc-bridge/src/lib.rs"
       language="Rust (Anchor)"
       code={`use anchor_lang::prelude::*;
-use arcium_sdk::prelude::*;
 
 declare_id!("VeiLXMpcBridgeXXXXXXXXXXXXXXXXXXXXXXXXXXX");
 
@@ -425,8 +501,8 @@ pub mod veilx_mpc_bridge {
     ) -> Result<()> {
         let config = &mut ctx.accounts.config;
         config.authority = ctx.accounts.authority.key();
-        config.threshold = threshold;       // e.g., 3
-        config.node_count = node_count;     // e.g., 5
+        config.threshold = threshold;
+        config.node_count = node_count;
         config.active_nodes = 0;
         config.bump = ctx.bumps.config;
         Ok(())
@@ -483,8 +559,8 @@ pub mod veilx_mpc_bridge {
     /// MPC node submits computation result
     pub fn submit_result(
         ctx: Context<SubmitResult>,
-        result_share: Vec<u8>,
-        proof: Vec<u8>,
+        _result_share: Vec<u8>,
+        _proof: Vec<u8>,
     ) -> Result<()> {
         let task = &mut ctx.accounts.mpc_task;
         let config = &ctx.accounts.config;
@@ -502,6 +578,62 @@ pub mod veilx_mpc_bridge {
         Ok(())
     }
 }
+
+/* ── Account validation structs ───────────────── */
+
+#[derive(Accounts)]
+pub struct Initialize<'info> {
+    #[account(
+        init,
+        payer = authority,
+        space = 8 + std::mem::size_of::<MpcConfig>(),
+        seeds = [b"mpc_config"],
+        bump
+    )]
+    pub config: Account<'info, MpcConfig>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct RegisterNode<'info> {
+    #[account(mut, has_one = authority)]
+    pub config: Account<'info, MpcConfig>,
+    #[account(
+        init,
+        payer = authority,
+        space = 8 + std::mem::size_of::<MpcNode>()
+    )]
+    pub node: Account<'info, MpcNode>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct SubmitToMpc<'info> {
+    pub config: Account<'info, MpcConfig>,
+    #[account(
+        init,
+        payer = user,
+        space = 8 + 32 + 4 + 1024 + 1 + 8 + 1
+    )]
+    pub mpc_task: Account<'info, MpcTask>,
+    #[account(mut)]
+    pub user: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct SubmitResult<'info> {
+    pub config: Account<'info, MpcConfig>,
+    #[account(mut)]
+    pub mpc_task: Account<'info, MpcTask>,
+    pub node: Signer<'info>,
+}
+
+/* ── Account structs ──────────────────────────── */
 
 #[account]
 pub struct MpcConfig {
@@ -571,8 +703,8 @@ pub mod veilx_liquidation {
     /// Initialize liquidation engine config
     pub fn initialize(
         ctx: Context<InitLiquidation>,
-        liquidation_fee: u16,       // basis points
-        insurance_share: u16,       // % of fee to insurance fund
+        liquidation_fee: u16,
+        insurance_share: u16,
     ) -> Result<()> {
         let config = &mut ctx.accounts.config;
         config.authority = ctx.accounts.authority.key();
@@ -583,15 +715,12 @@ pub mod veilx_liquidation {
         Ok(())
     }
 
-    /// Submit private liquidation check (called by MPC nodes)
-    /// The MPC network evaluates: current_price vs encrypted_liquidation_price
-    /// Only the boolean result (liquidatable or not) is revealed
+    /// Execute liquidation after MPC confirms undercollateralization
     pub fn execute_liquidation(
         ctx: Context<ExecuteLiquidation>,
         mpc_proof: Vec<u8>,
-        revealed_deficit: u64,    // only revealed after MPC confirms liquidation
+        revealed_deficit: u64,
     ) -> Result<()> {
-        // Verify MPC proof that position is indeed undercollateralized
         require!(
             verify_liquidation_proof(&mpc_proof),
             LiquidationError::InvalidProof
@@ -608,24 +737,20 @@ pub mod veilx_liquidation {
             .checked_div(10000)
             .unwrap() as u64;
 
-        // Insurance fund share
         let insurance_amount = fee
             .checked_mul(config.insurance_share as u64)
             .unwrap()
             .checked_div(100)
             .unwrap();
 
-        // Liquidator reward
         let liquidator_reward = fee - insurance_amount;
 
-        // Update state
         user_account.collateral = user_account.collateral
             .saturating_sub(revealed_deficit + fee);
 
         let config_mut = &mut ctx.accounts.config;
         config_mut.total_liquidations += 1;
 
-        // Close position
         position.close(ctx.accounts.liquidator.to_account_info())?;
 
         emit!(LiquidationEvent {
@@ -640,11 +765,60 @@ pub mod veilx_liquidation {
 }
 
 fn verify_liquidation_proof(proof: &[u8]) -> bool {
-    // In production: verify Arcium MPC proof
-    // that confirms position is undercollateralized
-    // without revealing the actual liquidation price
-    proof.len() > 0
+    // TODO: Replace with Arcium MPC proof verification
+    // once the SDK is publicly available on crates.io
+    !proof.is_empty()
 }
+
+/* ── Account validation structs ───────────────── */
+
+#[derive(Accounts)]
+pub struct InitLiquidation<'info> {
+    #[account(
+        init,
+        payer = authority,
+        space = 8 + std::mem::size_of::<LiquidationConfig>(),
+        seeds = [b"liq_config"],
+        bump
+    )]
+    pub config: Account<'info, LiquidationConfig>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct ExecuteLiquidation<'info> {
+    #[account(mut)]
+    pub config: Account<'info, LiquidationConfig>,
+    #[account(mut)]
+    pub position: Account<'info, Position>,
+    #[account(mut)]
+    pub user_account: Account<'info, UserAccount>,
+    #[account(mut)]
+    pub liquidator: Signer<'info>,
+}
+
+// Re-used from veilx-core (import in production)
+#[account]
+pub struct Position {
+    pub user: Pubkey,
+    pub market: Pubkey,
+    pub encrypted_entry: Vec<u8>,
+    pub encrypted_size: Vec<u8>,
+    pub encrypted_leverage: Vec<u8>,
+    pub side: u8,
+    pub timestamp: i64,
+}
+
+#[account]
+pub struct UserAccount {
+    pub user: Pubkey,
+    pub collateral: u64,
+    pub bump: u8,
+}
+
+/* ── Account structs ──────────────────────────── */
 
 #[account]
 pub struct LiquidationConfig {
