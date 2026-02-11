@@ -1,14 +1,37 @@
-import { ShieldCheck, Clock, History, X } from "lucide-react";
+import { useState } from "react";
+import { ShieldCheck, Clock, History, X, Loader2, ExternalLink } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import OrderForm from "@/components/OrderForm";
 import Orderbook from "@/components/Orderbook";
 import { useOrders } from "@/hooks/useOrders";
 import { usePriceOracle } from "@/hooks/usePriceOracle";
+import { toast } from "sonner";
 
 const TradingInterface = () => {
   const { prices } = usePriceOracle();
   const currentPrice = prices["SOL/USD"]?.price ?? 0;
-  const { positions, openOrders, history, submitOrder, cancelOrder } = useOrders();
+  const { positions, openOrders, history, submitOrder, cancelOrder, closePosition } = useOrders();
+  const [closingId, setClosingId] = useState<string | null>(null);
+
+  const handleClosePosition = async (id: string) => {
+    if (!currentPrice) {
+      toast.error("Price unavailable — try again");
+      return;
+    }
+    setClosingId(id);
+    try {
+      const pnl = await closePosition(id, currentPrice);
+      if (pnl !== undefined) {
+        toast.success(`Position closed — PnL: ${pnl >= 0 ? "+" : ""}$${pnl.toFixed(2)}`, {
+          description: "Transaction confirmed on Solana",
+        });
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to close position");
+    } finally {
+      setClosingId(null);
+    }
+  };
 
   return (
     <div className="grid lg:grid-cols-[1fr_320px] gap-4 max-w-5xl mx-auto">
@@ -47,25 +70,67 @@ const TradingInterface = () => {
                         <th className="text-left py-2 font-medium">Side</th>
                         <th className="text-right py-2 font-medium">Size</th>
                         <th className="text-right py-2 font-medium">Entry</th>
-                        <th className="text-right py-2 font-medium">Leverage</th>
+                        <th className="text-right py-2 font-medium">Lev.</th>
                         <th className="text-right py-2 font-medium">TP</th>
                         <th className="text-right py-2 font-medium">SL</th>
+                        <th className="text-right py-2 font-medium">uPnL</th>
+                        <th className="text-right py-2 font-medium"></th>
                       </tr>
                     </thead>
                     <tbody>
-                      {positions.map((p) => (
-                        <tr key={p.id} className="border-b border-border/50 hover:bg-muted/30">
-                          <td className="py-2.5 font-mono font-medium text-foreground">{p.market}</td>
-                          <td className={`py-2.5 font-semibold ${p.side === "long" ? "text-profit" : "text-loss"}`}>
-                            {p.side.toUpperCase()}
-                          </td>
-                          <td className="py-2.5 text-right font-mono text-foreground">{p.size}</td>
-                          <td className="py-2.5 text-right font-mono text-foreground">${p.entryPrice.toFixed(2)}</td>
-                          <td className="py-2.5 text-right font-mono text-primary">{p.leverage}x</td>
-                          <td className="py-2.5 text-right font-mono text-profit">{p.takeProfit ? `$${p.takeProfit.toFixed(2)}` : "—"}</td>
-                          <td className="py-2.5 text-right font-mono text-loss">{p.stopLoss ? `$${p.stopLoss.toFixed(2)}` : "—"}</td>
-                        </tr>
-                      ))}
+                      {positions.map((p) => {
+                        const priceDiff = currentPrice - p.entryPrice;
+                        const unrealizedPnl =
+                          p.side === "long"
+                            ? priceDiff * p.size * p.leverage
+                            : -priceDiff * p.size * p.leverage;
+                        const upnl = Math.round(unrealizedPnl * 100) / 100;
+
+                        return (
+                          <tr key={p.id} className="border-b border-border/50 hover:bg-muted/30">
+                            <td className="py-2.5 font-mono font-medium text-foreground">
+                              <div className="flex items-center gap-1">
+                                {p.market}
+                                {p.txSignature && !p.txSignature.startsWith("local_") && (
+                                  <a
+                                    href={`https://explorer.solana.com/tx/${p.txSignature}?cluster=devnet`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary hover:text-primary/80"
+                                    title="View on Solana Explorer"
+                                  >
+                                    <ExternalLink className="h-3 w-3" />
+                                  </a>
+                                )}
+                              </div>
+                            </td>
+                            <td className={`py-2.5 font-semibold ${p.side === "long" ? "text-profit" : "text-loss"}`}>
+                              {p.side.toUpperCase()}
+                            </td>
+                            <td className="py-2.5 text-right font-mono text-foreground">{p.size}</td>
+                            <td className="py-2.5 text-right font-mono text-foreground">${p.entryPrice.toFixed(2)}</td>
+                            <td className="py-2.5 text-right font-mono text-primary">{p.leverage}x</td>
+                            <td className="py-2.5 text-right font-mono text-profit">{p.takeProfit ? `$${p.takeProfit.toFixed(2)}` : "—"}</td>
+                            <td className="py-2.5 text-right font-mono text-loss">{p.stopLoss ? `$${p.stopLoss.toFixed(2)}` : "—"}</td>
+                            <td className={`py-2.5 text-right font-mono font-semibold ${upnl >= 0 ? "text-profit" : "text-loss"}`}>
+                              {upnl >= 0 ? "+" : ""}${upnl.toFixed(2)}
+                            </td>
+                            <td className="py-2.5 text-right">
+                              <button
+                                onClick={() => handleClosePosition(p.id)}
+                                disabled={closingId === p.id}
+                                className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-loss/10 text-loss hover:bg-loss/20 transition-colors disabled:opacity-50"
+                              >
+                                {closingId === p.id ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  "Close"
+                                )}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -136,6 +201,7 @@ const TradingInterface = () => {
                         <th className="text-left py-2 font-medium">Type</th>
                         <th className="text-right py-2 font-medium">Size</th>
                         <th className="text-right py-2 font-medium">Price</th>
+                        <th className="text-right py-2 font-medium">PnL</th>
                         <th className="text-right py-2 font-medium">Status</th>
                       </tr>
                     </thead>
@@ -149,7 +215,14 @@ const TradingInterface = () => {
                           <td className="py-2.5 text-muted-foreground uppercase">{o.type}</td>
                           <td className="py-2.5 text-right font-mono text-foreground">{o.size}</td>
                           <td className="py-2.5 text-right font-mono text-foreground">${o.price?.toFixed(2) ?? "Market"}</td>
-                          <td className={`py-2.5 text-right font-semibold ${o.status === "filled" ? "text-profit" : "text-loss"}`}>
+                          <td className={`py-2.5 text-right font-mono font-semibold ${
+                            o.pnl >= 0 ? "text-profit" : "text-loss"
+                          }`}>
+                            {o.status === "closed" ? `${o.pnl >= 0 ? "+" : ""}$${o.pnl.toFixed(2)}` : "—"}
+                          </td>
+                          <td className={`py-2.5 text-right font-semibold ${
+                            o.status === "closed" ? "text-foreground" : "text-loss"
+                          }`}>
                             {o.status.toUpperCase()}
                           </td>
                         </tr>

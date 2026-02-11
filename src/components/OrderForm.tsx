@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Lock, TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
+import { Lock, TrendingUp, TrendingDown, AlertTriangle, Loader2, Wallet } from "lucide-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { toast } from "sonner";
 import type { Order } from "@/hooks/useOrders";
 
 interface OrderFormProps {
-  onSubmit: (order: Omit<Order, "id" | "status" | "timestamp" | "entryPrice" | "pnl">) => Order;
+  onSubmit: (order: Omit<Order, "id" | "status" | "timestamp" | "entryPrice" | "pnl" | "txSignature">) => Promise<Order>;
   currentPrice: number;
   market: string;
 }
@@ -78,11 +78,8 @@ const OrderForm = ({ onSubmit, currentPrice, market }: OrderFormProps) => {
 
     setSubmitting(true);
 
-    // Simulate MPC encryption delay
-    await new Promise((r) => setTimeout(r, 800));
-
     try {
-      const order = onSubmit({
+      const order = await onSubmit({
         side,
         type: orderType,
         size: sizeNum,
@@ -93,9 +90,14 @@ const OrderForm = ({ onSubmit, currentPrice, market }: OrderFormProps) => {
         market,
       });
 
+      const isTxOnChain = order.txSignature && !order.txSignature.startsWith("local_");
       toast.success(
-        `${orderType === "market" ? "Market" : "Limit"} ${side} order ${orderType === "market" ? "filled" : "placed"} — encrypted via Arcium`,
-        { description: `${sizeNum} ${market.split("/")[0]} @ ${leverage}x leverage` }
+        `${orderType === "market" ? "Market" : "Limit"} ${side} order ${orderType === "market" ? "filled" : "placed"}`,
+        {
+          description: isTxOnChain
+            ? `${sizeNum} ${market.split("/")[0]} @ ${leverage}x — Tx: ${order.txSignature?.slice(0, 12)}…`
+            : `${sizeNum} ${market.split("/")[0]} @ ${leverage}x leverage — encrypted via Arcium`,
+        }
       );
 
       // Reset form
@@ -103,8 +105,8 @@ const OrderForm = ({ onSubmit, currentPrice, market }: OrderFormProps) => {
       setPrice("");
       setStopLoss("");
       setTakeProfit("");
-    } catch {
-      toast.error("Order failed — try again");
+    } catch (err: any) {
+      toast.error(err?.message || "Order rejected — check wallet and try again");
     } finally {
       setSubmitting(false);
     }
@@ -270,7 +272,7 @@ const OrderForm = ({ onSubmit, currentPrice, market }: OrderFormProps) => {
       <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 flex items-start gap-2">
         <Lock className="h-4 w-4 text-primary mt-0.5 shrink-0" />
         <p className="text-[11px] text-primary/80">
-          Order encrypted via Arcium MPC before submission. Position details remain private.
+          Order encrypted via Arcium MPC — your wallet will prompt you to confirm the on-chain transaction.
         </p>
       </div>
 
@@ -284,11 +286,19 @@ const OrderForm = ({ onSubmit, currentPrice, market }: OrderFormProps) => {
             : "bg-loss text-primary-foreground hover:opacity-90"
         }`}
       >
-        {submitting
-          ? "Encrypting & Submitting…"
-          : !connected
-            ? "Connect Wallet"
-            : `${side === "long" ? "Long" : "Short"} ${market.split("/")[0]} — ${orderType === "market" ? "Market" : "Limit"}`}
+        {submitting ? (
+          <span className="flex items-center justify-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Confirm in Wallet…
+          </span>
+        ) : !connected ? (
+          <span className="flex items-center justify-center gap-2">
+            <Wallet className="h-4 w-4" />
+            Connect Wallet
+          </span>
+        ) : (
+          `${side === "long" ? "Long" : "Short"} ${market.split("/")[0]} — ${orderType === "market" ? "Market" : "Limit"}`
+        )}
       </button>
     </div>
   );
