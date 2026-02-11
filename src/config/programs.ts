@@ -5,8 +5,8 @@
 
 export const PROGRAM_IDS = {
   VEILX_CORE: "DLkXTKQVx422rBrSPJDdZdrJYsYXEnCuGLoucr2Bixnb",
-  VEILX_MPC_BRIDGE: "<your-veilx-mpc-bridge-program-id>",
-  VEILX_LIQUIDATION: "<your-veilx-liquidation-program-id>",
+  VEILX_MPC_BRIDGE: "DooxjY3g8Xn1PZTSd852aKdnA39HvmpSubphAP2VLYks",
+  VEILX_LIQUIDATION: "Fq4LqoHrk1Ru7oQZ1UaF4bV2njt3VYt4Qikrkrf318eW",
 };
 
 export const ARCIUM_CONFIG = {

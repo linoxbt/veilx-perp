@@ -508,7 +508,7 @@ pub enum VeilXError {
       language="Rust (Anchor)"
       code={`use anchor_lang::prelude::*;
 
-declare_id!("VeiLXMpcBridgeXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+declare_id!("DooxjY3g8Xn1PZTSd852aKdnA39HvmpSubphAP2VLYks");
 
 #[program]
 pub mod veilx_mpc_bridge {
@@ -715,7 +715,7 @@ pub enum BridgeError {
       language="Rust (Anchor)"
       code={`use anchor_lang::prelude::*;
 
-declare_id!("VeiLXLiquidationXXXXXXXXXXXXXXXXXXXXXXXXX");
+declare_id!("Fq4LqoHrk1Ru7oQZ1UaF4bV2njt3VYt4Qikrkrf318eW");
 
 #[program]
 pub mod veilx_liquidation {
