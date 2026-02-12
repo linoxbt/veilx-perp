@@ -15,9 +15,19 @@ const Footer = () => {
           <Link to="/portfolio" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Portfolio</Link>
           <Link to="/docs" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Docs</Link>
         </div>
-        <p className="text-[10px] text-muted-foreground">
-          Private perpetual futures powered by MPC.
-        </p>
+        <div className="flex items-center gap-4">
+          <p className="text-[10px] text-muted-foreground">
+            Private perpetual futures powered by MPC.
+          </p>
+          <a
+            href="https://x.com/lino"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] text-muted-foreground hover:text-foreground transition-colors font-medium"
+          >
+            Built by Lino
+          </a>
+        </div>
       </div>
     </footer>
   );
