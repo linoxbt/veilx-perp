@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Lock, TrendingUp, TrendingDown, AlertTriangle, Loader2, Wallet } from "lucide-react";
+import { Lock, TrendingUp, TrendingDown, AlertTriangle, Loader2, Wallet, Info } from "lucide-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { toast } from "sonner";
@@ -10,6 +10,10 @@ interface OrderFormProps {
   currentPrice: number;
   market: string;
 }
+
+const TAKER_FEE_BPS = 5; // 0.05%
+const MAKER_FEE_BPS = 2; // 0.02%
+const DEFAULT_SLIPPAGE = 0.1; // 0.1%
 
 const OrderForm = ({ onSubmit, currentPrice, market }: OrderFormProps) => {
   const { connected } = useWallet();
@@ -23,6 +27,8 @@ const OrderForm = ({ onSubmit, currentPrice, market }: OrderFormProps) => {
   const [stopLoss, setStopLoss] = useState("");
   const [takeProfit, setTakeProfit] = useState("");
   const [showTpSl, setShowTpSl] = useState(false);
+  const [slippage, setSlippage] = useState(DEFAULT_SLIPPAGE.toString());
+  const [showSlippage, setShowSlippage] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const leveragePresets = [1, 5, 10, 25, 50];
@@ -31,6 +37,10 @@ const OrderForm = ({ onSubmit, currentPrice, market }: OrderFormProps) => {
   const sizeNum = Number(size) || 0;
   const notionalValue = sizeNum * effectivePrice;
   const margin = notionalValue / leverage;
+  const slippagePct = Number(slippage) || DEFAULT_SLIPPAGE;
+  const slippageAmount = orderType === "market" ? notionalValue * (slippagePct / 100) : 0;
+  const feeBps = orderType === "market" ? TAKER_FEE_BPS : MAKER_FEE_BPS;
+  const feeAmount = notionalValue * (feeBps / 10000);
   const liquidationPrice =
     side === "long"
       ? effectivePrice * (1 - 1 / leverage + 0.005)
@@ -41,7 +51,6 @@ const OrderForm = ({ onSubmit, currentPrice, market }: OrderFormProps) => {
       setVisible(true);
       return;
     }
-
     if (!sizeNum || sizeNum <= 0) {
       toast.error("Enter a valid size");
       return;
@@ -54,30 +63,28 @@ const OrderForm = ({ onSubmit, currentPrice, market }: OrderFormProps) => {
     const slNum = Number(stopLoss) || null;
     const tpNum = Number(takeProfit) || null;
 
-    // Validate SL/TP direction
     if (slNum) {
       if (side === "long" && slNum >= effectivePrice) {
-        toast.error("Stop loss must be below entry price for longs");
+        toast.error("Stop loss must be below entry for longs");
         return;
       }
       if (side === "short" && slNum <= effectivePrice) {
-        toast.error("Stop loss must be above entry price for shorts");
+        toast.error("Stop loss must be above entry for shorts");
         return;
       }
     }
     if (tpNum) {
       if (side === "long" && tpNum <= effectivePrice) {
-        toast.error("Take profit must be above entry price for longs");
+        toast.error("Take profit must be above entry for longs");
         return;
       }
       if (side === "short" && tpNum >= effectivePrice) {
-        toast.error("Take profit must be below entry price for shorts");
+        toast.error("Take profit must be below entry for shorts");
         return;
       }
     }
 
     setSubmitting(true);
-
     try {
       const order = await onSubmit({
         side,
@@ -99,8 +106,6 @@ const OrderForm = ({ onSubmit, currentPrice, market }: OrderFormProps) => {
             : `${sizeNum} ${market.split("/")[0]} @ ${leverage}x leverage — encrypted via Arcium`,
         }
       );
-
-      // Reset form
       setSize("");
       setPrice("");
       setStopLoss("");
@@ -113,7 +118,7 @@ const OrderForm = ({ onSubmit, currentPrice, market }: OrderFormProps) => {
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+    <div className="rounded-xl border border-border bg-card p-5 space-y-3">
       {/* Long / Short */}
       <div className="flex rounded-lg bg-muted p-1">
         <button
@@ -158,7 +163,7 @@ const OrderForm = ({ onSubmit, currentPrice, market }: OrderFormProps) => {
 
       {/* Size */}
       <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">
           Size ({market.split("/")[0]})
         </label>
         <input
@@ -167,28 +172,28 @@ const OrderForm = ({ onSubmit, currentPrice, market }: OrderFormProps) => {
           value={size}
           onChange={(e) => setSize(e.target.value)}
           placeholder="0.00"
-          className="w-full rounded-lg border border-border bg-muted px-3 py-2.5 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+          className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
         />
       </div>
 
       {/* Limit Price */}
       {orderType === "limit" && (
         <div>
-          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Limit Price (USDC)</label>
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Limit Price (USDC)</label>
           <input
             type="number"
             step="0.01"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
             placeholder={currentPrice.toFixed(2)}
-            className="w-full rounded-lg border border-border bg-muted px-3 py-2.5 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>
       )}
 
       {/* Leverage */}
       <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">
           Leverage: <span className="text-primary font-bold">{leverage}x</span>
         </label>
         <div className="flex gap-1.5 mb-2">
@@ -224,7 +229,7 @@ const OrderForm = ({ onSubmit, currentPrice, market }: OrderFormProps) => {
       </button>
 
       {showTpSl && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="text-[11px] font-medium text-profit mb-1 block">Take Profit</label>
             <input
@@ -250,18 +255,58 @@ const OrderForm = ({ onSubmit, currentPrice, market }: OrderFormProps) => {
         </div>
       )}
 
+      {/* Slippage */}
+      <div>
+        <button
+          onClick={() => setShowSlippage(!showSlippage)}
+          className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Info className="h-3 w-3" />
+          Slippage Tolerance: {slippagePct}%
+        </button>
+        {showSlippage && (
+          <div className="flex gap-1.5 mt-1.5">
+            {[0.05, 0.1, 0.5, 1].map((s) => (
+              <button
+                key={s}
+                onClick={() => setSlippage(s.toString())}
+                className={`flex-1 rounded-md py-1 text-[10px] font-semibold transition-all ${
+                  Number(slippage) === s
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground border border-border"
+                }`}
+              >
+                {s}%
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Order Summary */}
       {sizeNum > 0 && (
-        <div className="rounded-lg bg-muted/50 border border-border p-3 space-y-1.5 text-xs">
+        <div className="rounded-lg bg-muted/50 border border-border p-3 space-y-1 text-[11px]">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Notional Value</span>
+            <span className="text-muted-foreground">Order Value</span>
             <span className="font-mono text-foreground">${notionalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Required Margin</span>
             <span className="font-mono text-foreground">${margin.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
           </div>
+          {orderType === "market" && slippageAmount > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Max Slippage</span>
+              <span className="font-mono text-foreground">${slippageAmount.toFixed(2)}</span>
+            </div>
+          )}
           <div className="flex justify-between">
+            <span className="text-muted-foreground">
+              Fee ({orderType === "market" ? "Taker" : "Maker"} {feeBps / 100}%)
+            </span>
+            <span className="font-mono text-foreground">${feeAmount.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between border-t border-border pt-1 mt-1">
             <span className="text-muted-foreground">Est. Liq. Price</span>
             <span className="font-mono text-loss">${liquidationPrice.toFixed(2)}</span>
           </div>
@@ -269,10 +314,10 @@ const OrderForm = ({ onSubmit, currentPrice, market }: OrderFormProps) => {
       )}
 
       {/* Encryption notice */}
-      <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 flex items-start gap-2">
-        <Lock className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-        <p className="text-[11px] text-primary/80">
-          Order encrypted via Arcium MPC — your wallet will prompt you to confirm the on-chain transaction.
+      <div className="rounded-lg border border-primary/20 bg-primary/5 p-2.5 flex items-start gap-2">
+        <Lock className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
+        <p className="text-[10px] text-primary/80">
+          Order encrypted via Arcium MPC — your wallet will prompt to confirm.
         </p>
       </div>
 
