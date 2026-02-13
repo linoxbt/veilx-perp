@@ -1,6 +1,5 @@
 // ═══════════════════════════════════════════════════════
 // VeilX Program Configuration
-// Replace placeholder values after deploying to devnet
 // ═══════════════════════════════════════════════════════
 
 export const PROGRAM_IDS = {
@@ -24,7 +23,6 @@ export const PYTH_FEEDS: Record<string, string> = {
 };
 
 // Market PDAs derived from [b"market", market_name.as_bytes()]
-// These are deterministic — derived from the VeilX Core program ID
 import { PublicKey } from "@solana/web3.js";
 
 export function getMarketPda(marketName: string): PublicKey {
@@ -51,16 +49,14 @@ export const MARKET_PDAS: Record<string, string> = (() => {
 
 // ═══════════════════════════════════════════════════════
 // VeilX Test USDC (SPL Token)
-// Deploy your own mint via: spl-token create-token --decimals 6
-// Then mint tokens:         spl-token mint <MINT_ADDRESS> 1000000
-// Replace the address below with your deployed mint address.
+// Deployed mint with 6 decimals
 // ═══════════════════════════════════════════════════════
-export const USDC_MINT = new PublicKey("VXUsdcTESTxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+export const USDC_MINT = new PublicKey("3nCh8MyXJtH55BbLFyL1aZYjwjDpbU3rBmFaPLWq85gK");
 export const USDC_DECIMALS = 6;
 
 // Native SOL mint (for wrapping SOL → wSOL)
 export const NATIVE_SOL_MINT = new PublicKey("So11111111111111111111111111111111111111112");
 export const SOL_DECIMALS = 9;
 
-// VeilX Swap Program ID — handles SOL↔USDC swaps with MPC privacy
-export const VEILX_SWAP_PROGRAM = "VXSwapxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+// VeilX Swap Program ID
+export const VEILX_SWAP_PROGRAM = "92Qp1BiRNjVnqL9cYBNXYv4zQCdDzSycJn2Fia9qVBPh";
