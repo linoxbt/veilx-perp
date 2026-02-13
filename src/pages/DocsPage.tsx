@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { Copy, Check } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Eye, ArrowLeft, FileCode, Shield, Layers, Rocket, Lock, Server, BookOpen, Cpu } from "lucide-react";
+import veilxLogo from "@/assets/veilx-logo.png";
 
 const TABS = [
   { id: "overview", label: "Overview", icon: BookOpen },
@@ -28,8 +29,8 @@ const DocsPage = () => {
             Back to VeilX
           </Link>
           <div className="flex items-center gap-3 mb-2">
-            <Eye className="h-6 w-6 text-primary" />
-            <h1 className="text-3xl font-bold">
+            <img src={veilxLogo} alt="VeilX" className="h-8 w-8 rounded-lg" />
+            <h1 className="text-2xl sm:text-3xl font-bold">
               <span className="text-gradient">VeilX</span> <span className="text-foreground">Documentation</span>
             </h1>
           </div>
@@ -881,7 +882,7 @@ pub enum LiquidationError {
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 use anchor_lang::system_program;
 
-declare_id!("VXSwapxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+declare_id!("92Qp1BiRNjVnqL9cYBNXYv4zQCdDzSycJn2Fia9qVBPh");
 
 #[program]
 pub mod veilx_swap {
@@ -1184,7 +1185,7 @@ export const USDC_DECIMALS = 6;`} />
           <tr className="border-b border-border/50">
             <td className="py-2 font-mono text-primary">pool</td>
             <td className="py-2 font-mono">Auto-derived (PDA)</td>
-            <td className="py-2 text-muted-foreground">Seeds: [b"swap_pool"]. Auto-derived by Playground.</td>
+            <td className="py-2 text-muted-foreground">Seeds: [b"pool"]. Auto-derived by Playground. ⚠️ Must match seeds in InitializePool struct exactly.</td>
           </tr>
           <tr className="border-b border-border/50">
             <td className="py-2 font-mono text-primary">oracle</td>
@@ -1213,6 +1214,7 @@ export const USDC_DECIMALS = 6;`} />
     <div className="rounded-xl border border-loss/30 bg-loss/5 p-4 mb-6 text-sm">
       <p className="text-loss font-semibold mb-1">⚠️ Common Errors & Fixes</p>
       <ul className="text-muted-foreground space-y-1 ml-4">
+        <li>• <strong className="text-foreground">"A seeds constraint was violated"</strong> — The PDA seeds in the test must exactly match your contract. The InitializePool struct uses <code className="text-primary bg-muted px-1 rounded">seeds = [b"pool"]</code> — NOT <code className="text-primary bg-muted px-1 rounded">[b"swap_pool"]</code>. If you changed the seed in your code, redeploy. Playground auto-derives the PDA from the IDL, so if the IDL doesn't match the deployed code, you'll get this error. <strong className="text-foreground">Fix: Rebuild and redeploy</strong> with matching seeds.</li>
         <li>• <strong className="text-foreground">"Insufficient funds"</strong> — Airdrop more devnet SOL: <code className="text-primary bg-muted px-1 rounded">solana airdrop 2</code></li>
         <li>• <strong className="text-foreground">"Account already in use"</strong> — Pool already initialized, skip this step</li>
         <li>• <strong className="text-foreground">"Custom program error 0x1"</strong> — Check the Anchor error codes in the IDL (usually InvalidDirection)</li>
@@ -1513,6 +1515,84 @@ pub fn compute_pnl(
         encrypted_pnl: raw_pnl,
         pnl_proof: generate_pnl_proof(&raw_pnl),
     })
+}
+
+/// ═══════════════════════════════════════════════════════
+/// FUNDING RATE COMPUTATION (Arcium MXE)
+/// ═══════════════════════════════════════════════════════
+/// Funding rates keep perp prices aligned with spot.
+/// Individual exposure stays encrypted — only aggregate
+/// open interest is revealed for rate calculation.
+///
+/// Formula:
+///   funding_rate = clamp(
+///     (perp_mark_price - spot_index_price) / spot_index_price,
+///     -0.05%, +0.05%
+///   )
+///   payment = position_size * funding_rate
+///   (positive rate: longs pay shorts)
+///
+/// Privacy guarantee:
+///   - Each trader's position_size is EncryptedU64
+///   - Aggregate OI is computed via MPC summation
+///   - Individual funding payment computed privately
+///   - Only aggregate rate is published on-chain
+
+#[mxe_function]
+pub fn compute_funding_rate(
+    mark_price: EncryptedU64,       // perp mark price
+    index_price: u64,               // spot price (public from Pyth)
+    total_long_oi: EncryptedU64,    // sum of all long sizes
+    total_short_oi: EncryptedU64,   // sum of all short sizes
+) -> MxeResult<FundingRateResult> {
+    // Premium = (mark - index) / index  (in basis points)
+    let premium_bps = ((mark_price - EncryptedU64::from(index_price))
+        * EncryptedU64::from(10000))
+        / EncryptedU64::from(index_price);
+
+    // Clamp to [-50, +50] bps per hour
+    let clamped = premium_bps.clamp(
+        EncryptedI64::from(-50),
+        EncryptedI64::from(50),
+    );
+
+    // OI imbalance adjustment
+    let oi_ratio = total_long_oi * EncryptedU64::from(100)
+        / (total_long_oi + total_short_oi);
+
+    Ok(FundingRateResult {
+        rate_bps: clamped,            // revealed on-chain (public)
+        long_oi: total_long_oi,       // aggregated (public)
+        short_oi: total_short_oi,     // aggregated (public)
+        oi_ratio,
+    })
+}
+
+/// Compute individual trader's funding payment (PRIVATE)
+#[mxe_function]
+pub fn compute_funding_payment(
+    position_size: EncryptedU64,
+    funding_rate_bps: i64,    // from compute_funding_rate (public)
+    side: EncryptedU8,        // 0 = long, 1 = short
+) -> MxeResult<FundingPayment> {
+    let payment = position_size
+        * EncryptedU64::from(funding_rate_bps.unsigned_abs())
+        / EncryptedU64::from(10000);
+
+    // Longs pay when rate > 0, shorts pay when rate < 0
+    let pays = if funding_rate_bps > 0 {
+        side == EncryptedU8::from(0)  // longs pay
+    } else {
+        side == EncryptedU8::from(1)  // shorts pay
+    };
+
+    Ok(FundingPayment {
+        encrypted_amount: payment,
+        is_payer: pays,
+        proof: generate_funding_proof(&payment, &pays),
+    })
+    // Individual payment stays encrypted — settled via MPC
+    // Other traders NEVER see your position size or payment
 }`}
     />
 
