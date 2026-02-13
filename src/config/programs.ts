@@ -49,6 +49,18 @@ export const MARKET_PDAS: Record<string, string> = (() => {
   return pdas;
 })();
 
-// Devnet USDC mint (SPL token)
-export const USDC_MINT = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
+// ═══════════════════════════════════════════════════════
+// VeilX Test USDC (SPL Token)
+// Deploy your own mint via: spl-token create-token --decimals 6
+// Then mint tokens:         spl-token mint <MINT_ADDRESS> 1000000
+// Replace the address below with your deployed mint address.
+// ═══════════════════════════════════════════════════════
+export const USDC_MINT = new PublicKey("VXUsdcTESTxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 export const USDC_DECIMALS = 6;
+
+// Native SOL mint (for wrapping SOL → wSOL)
+export const NATIVE_SOL_MINT = new PublicKey("So11111111111111111111111111111111111111112");
+export const SOL_DECIMALS = 9;
+
+// VeilX Swap Program ID — handles SOL↔USDC swaps with MPC privacy
+export const VEILX_SWAP_PROGRAM = "VXSwapxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";

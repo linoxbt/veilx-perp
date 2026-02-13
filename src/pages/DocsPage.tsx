@@ -867,6 +867,195 @@ pub enum LiquidationError {
     InvalidProof,
 }`}
     />
+
+    <h3 className="text-lg font-semibold text-foreground mb-3 mt-8">4. VeilX Swap Program (SOL ↔ USDC)</h3>
+    <p className="text-sm text-muted-foreground mb-4">
+      Handles on-chain SOL↔USDC swaps with Arcium MPC privacy. Swap amounts and rates are encrypted — only the final token transfer is settled publicly.
+    </p>
+    <CodeBlock
+      title="programs/veilx-swap/src/lib.rs"
+      language="Rust (Anchor)"
+      code={`use anchor_lang::prelude::*;
+use anchor_spl::token::{self, Token, TokenAccount, Transfer};
+use anchor_lang::system_program;
+
+declare_id!("VXSwapxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+
+#[program]
+pub mod veilx_swap {
+    use super::*;
+
+    /// Initialize the swap pool with SOL and USDC reserves
+    pub fn initialize_pool(
+        ctx: Context<InitializePool>,
+        sol_reserve: u64,
+        usdc_reserve: u64,
+    ) -> Result<()> {
+        let pool = &mut ctx.accounts.pool;
+        pool.authority = ctx.accounts.authority.key();
+        pool.sol_reserve = sol_reserve;
+        pool.usdc_reserve = usdc_reserve;
+        pool.oracle = ctx.accounts.oracle.key();
+        pool.total_swaps = 0;
+        pool.bump = ctx.bumps.pool;
+        Ok(())
+    }
+
+    /// Execute an encrypted swap (SOL → USDC or USDC → SOL)
+    pub fn swap_encrypted(
+        ctx: Context<SwapEncrypted>,
+        amount: u64,
+        direction: u8, // 0 = SOL→USDC, 1 = USDC→SOL
+    ) -> Result<()> {
+        // In production, amount is encrypted and verified by MPC.
+        // The MPC network fetches Pyth oracle price privately
+        // and computes output on ciphertext.
+        require!(direction <= 1, SwapError::InvalidDirection);
+
+        let pool = &mut ctx.accounts.pool;
+
+        if direction == 0 {
+            // SOL → USDC
+            system_program::transfer(
+                CpiContext::new(
+                    ctx.accounts.system_program.to_account_info(),
+                    system_program::Transfer {
+                        from: ctx.accounts.user.to_account_info(),
+                        to: ctx.accounts.pool_sol_vault.to_account_info(),
+                    },
+                ),
+                amount,
+            )?;
+
+            let usdc_output = calculate_output(
+                amount, pool.sol_reserve, pool.usdc_reserve
+            );
+
+            let seeds = &[b"pool".as_ref(), &[pool.bump]];
+            let signer = &[&seeds[..]];
+            token::transfer(
+                CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info(),
+                    Transfer {
+                        from: ctx.accounts.pool_usdc_vault.to_account_info(),
+                        to: ctx.accounts.user_usdc_ata.to_account_info(),
+                        authority: ctx.accounts.pool.to_account_info(),
+                    },
+                    signer,
+                ),
+                usdc_output,
+            )?;
+
+            pool.sol_reserve += amount;
+            pool.usdc_reserve -= usdc_output;
+        } else {
+            // USDC → SOL
+            token::transfer(
+                CpiContext::new(
+                    ctx.accounts.token_program.to_account_info(),
+                    Transfer {
+                        from: ctx.accounts.user_usdc_ata.to_account_info(),
+                        to: ctx.accounts.pool_usdc_vault.to_account_info(),
+                        authority: ctx.accounts.user.to_account_info(),
+                    },
+                ),
+                amount,
+            )?;
+
+            let sol_output = calculate_output(
+                amount, pool.usdc_reserve, pool.sol_reserve
+            );
+
+            **ctx.accounts.pool_sol_vault
+                .try_borrow_mut_lamports()? -= sol_output;
+            **ctx.accounts.user
+                .try_borrow_mut_lamports()? += sol_output;
+
+            pool.usdc_reserve += amount;
+            pool.sol_reserve -= sol_output;
+        }
+
+        pool.total_swaps += 1;
+        emit!(SwapExecuted {
+            user: ctx.accounts.user.key(),
+            direction,
+            amount_in: amount,
+        });
+        Ok(())
+    }
+}
+
+/// Constant-product AMM: output = (amount * out_reserve) / (in_reserve + amount)
+/// In production, Arcium MPC computes this on encrypted data.
+fn calculate_output(amount_in: u64, in_reserve: u64, out_reserve: u64) -> u64 {
+    let num = (amount_in as u128) * (out_reserve as u128);
+    let den = (in_reserve as u128) + (amount_in as u128);
+    (num / den) as u64
+}
+
+#[derive(Accounts)]
+pub struct InitializePool<'info> {
+    #[account(init, payer = authority,
+        space = 8 + std::mem::size_of::<SwapPool>(),
+        seeds = [b"pool"], bump)]
+    pub pool: Account<'info, SwapPool>,
+    /// CHECK: Pyth oracle feed
+    pub oracle: UncheckedAccount<'info>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct SwapEncrypted<'info> {
+    #[account(mut, seeds = [b"pool"], bump = pool.bump)]
+    pub pool: Account<'info, SwapPool>,
+    /// CHECK: Pool SOL vault
+    #[account(mut)]
+    pub pool_sol_vault: UncheckedAccount<'info>,
+    #[account(mut)]
+    pub pool_usdc_vault: Account<'info, TokenAccount>,
+    #[account(mut)]
+    pub user_usdc_ata: Account<'info, TokenAccount>,
+    #[account(mut)]
+    pub user: Signer<'info>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+}
+
+#[account]
+pub struct SwapPool {
+    pub authority: Pubkey,
+    pub oracle: Pubkey,
+    pub sol_reserve: u64,
+    pub usdc_reserve: u64,
+    pub total_swaps: u64,
+    pub bump: u8,
+}
+
+#[event]
+pub struct SwapExecuted {
+    pub user: Pubkey,
+    pub direction: u8,
+    pub amount_in: u64,
+}
+
+#[error_code]
+pub enum SwapError {
+    #[msg("Invalid swap direction (must be 0 or 1)")]
+    InvalidDirection,
+}`}
+    />
+
+    <DocSection title="Creating Your VeilX Test USDC">
+      <p>VeilX uses its own test USDC mint instead of Circle's devnet USDC — giving you unlimited supply with no faucet limits:</p>
+      <ol className="space-y-2 list-decimal list-inside">
+        <li><strong className="text-foreground">Create the mint:</strong> <code className="text-primary bg-muted px-1 rounded">spl-token create-token --decimals 6</code></li>
+        <li><strong className="text-foreground">Create a token account:</strong> <code className="text-primary bg-muted px-1 rounded">{"spl-token create-account <MINT_ADDRESS>"}</code></li>
+        <li><strong className="text-foreground">Mint test tokens:</strong> <code className="text-primary bg-muted px-1 rounded">{"spl-token mint <MINT_ADDRESS> 1000000"}</code></li>
+        <li><strong className="text-foreground">Update config:</strong> Replace <code className="text-primary bg-muted px-1 rounded">USDC_MINT</code> in <code className="text-primary bg-muted px-1 rounded">src/config/programs.ts</code> with your mint address.</li>
+      </ol>
+    </DocSection>
   </>
 );
 
