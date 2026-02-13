@@ -1048,14 +1048,184 @@ pub enum SwapError {
     />
 
     <DocSection title="Creating Your VeilX Test USDC">
-      <p>VeilX uses its own test USDC mint instead of Circle's devnet USDC — giving you unlimited supply with no faucet limits:</p>
-      <ol className="space-y-2 list-decimal list-inside">
-        <li><strong className="text-foreground">Create the mint:</strong> <code className="text-primary bg-muted px-1 rounded">spl-token create-token --decimals 6</code></li>
-        <li><strong className="text-foreground">Create a token account:</strong> <code className="text-primary bg-muted px-1 rounded">{"spl-token create-account <MINT_ADDRESS>"}</code></li>
-        <li><strong className="text-foreground">Mint test tokens:</strong> <code className="text-primary bg-muted px-1 rounded">{"spl-token mint <MINT_ADDRESS> 1000000"}</code></li>
-        <li><strong className="text-foreground">Update config:</strong> Replace <code className="text-primary bg-muted px-1 rounded">USDC_MINT</code> in <code className="text-primary bg-muted px-1 rounded">src/config/programs.ts</code> with your mint address.</li>
-      </ol>
+      <p>VeilX uses its own custom test USDC mint on devnet instead of Circle's official USDC. This gives you full mint authority — unlimited supply, no faucet rate limits, and complete control for testing.</p>
     </DocSection>
+
+    <h3 className="text-lg font-semibold text-foreground mb-3">Prerequisites</h3>
+    <div className="text-sm text-muted-foreground space-y-2 mb-4">
+      <p>You need the <strong className="text-foreground">Solana CLI</strong> and <strong className="text-foreground">SPL Token CLI</strong> installed. If you don't have them:</p>
+    </div>
+    <CodeBlock title="Install Solana CLI (if not installed)" language="bash" code={`# Install Solana CLI
+sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"
+
+# Verify installation
+solana --version
+
+# Set network to devnet
+solana config set --url https://api.devnet.solana.com
+
+# Create or import a wallet (skip if you already have one)
+solana-keygen new --outfile ~/.config/solana/id.json
+
+# Airdrop devnet SOL (you need SOL for transaction fees)
+solana airdrop 2`} />
+
+    <h3 className="text-lg font-semibold text-foreground mb-3 mt-6">Step 1 — Create the Test USDC Mint</h3>
+    <div className="text-sm text-muted-foreground space-y-2 mb-4">
+      <p>This creates a new SPL token with 6 decimals (same as real USDC). Your wallet becomes the <strong className="text-foreground">mint authority</strong> — meaning only you can create new tokens.</p>
+    </div>
+    <CodeBlock title="Create the mint" language="bash" code={`# Create a new SPL token with 6 decimals (USDC standard)
+spl-token create-token --decimals 6
+
+# ─── Expected output ───
+# Creating token 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU
+# Address:  4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU  ← THIS IS YOUR MINT ADDRESS
+# Decimals: 6
+# 
+# Signature: 5KtP...xxxxx
+
+# ⚠️ IMPORTANT: Copy the "Address" — this is your VeilX Test USDC mint.
+# You'll use this in every following step.`} />
+
+    <h3 className="text-lg font-semibold text-foreground mb-3 mt-6">Step 2 — Create a Token Account</h3>
+    <div className="text-sm text-muted-foreground space-y-2 mb-4">
+      <p>Before you can hold tokens, your wallet needs an <strong className="text-foreground">Associated Token Account (ATA)</strong> for this mint. This is like opening a "USDC wallet" inside your Solana wallet.</p>
+    </div>
+    <CodeBlock title="Create token account" language="bash" code={`# Replace <MINT_ADDRESS> with the address from Step 1
+spl-token create-account <MINT_ADDRESS>
+
+# ─── Expected output ───
+# Creating account 7Yh3K...xxxxx
+# Signature: 3nBq...xxxxx
+
+# Example with a real address:
+# spl-token create-account 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU`} />
+
+    <h3 className="text-lg font-semibold text-foreground mb-3 mt-6">Step 3 — Mint Test USDC Tokens</h3>
+    <div className="text-sm text-muted-foreground space-y-2 mb-4">
+      <p>Now mint tokens to your wallet. The amount is in <strong className="text-foreground">whole units</strong> (not lamports) — so <code className="text-primary bg-muted px-1 rounded">1000000</code> = 1,000,000 USDC.</p>
+    </div>
+    <CodeBlock title="Mint tokens" language="bash" code={`# Mint 1,000,000 test USDC to your wallet
+spl-token mint <MINT_ADDRESS> 1000000
+
+# ─── Expected output ───
+# Minting 1000000 tokens
+#   Token: <MINT_ADDRESS>
+#   Recipient: 7Yh3K...xxxxx
+# Signature: 4xKp...xxxxx
+
+# Verify your balance
+spl-token balance <MINT_ADDRESS>
+# Output: 1000000`} />
+
+    <h3 className="text-lg font-semibold text-foreground mb-3 mt-6">Step 4 — Mint to Other Wallets (for testing)</h3>
+    <div className="text-sm text-muted-foreground space-y-2 mb-4">
+      <p>To give test USDC to other wallets (e.g., your Phantom wallet for frontend testing):</p>
+    </div>
+    <CodeBlock title="Mint to another wallet" language="bash" code={`# First, find your Phantom wallet address:
+# Open Phantom → click your address at the top → copy it
+
+# Mint 10,000 test USDC to your Phantom wallet
+spl-token mint <MINT_ADDRESS> 10000 -- <PHANTOM_WALLET_ADDRESS>
+
+# Example:
+# spl-token mint 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU 10000 -- 9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM`} />
+
+    <h3 className="text-lg font-semibold text-foreground mb-3 mt-6">Step 5 — Update the VeilX Configuration</h3>
+    <div className="text-sm text-muted-foreground space-y-2 mb-4">
+      <p>Replace the placeholder mint address in the frontend config with your newly created mint:</p>
+    </div>
+    <CodeBlock title="src/config/programs.ts" language="typescript" code={`// Replace this placeholder with YOUR mint address from Step 1:
+export const USDC_MINT = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
+export const USDC_DECIMALS = 6;`} />
+
+    <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 mb-6 text-sm">
+      <p className="text-primary font-semibold mb-1">💡 Quick Reference</p>
+      <ul className="text-muted-foreground space-y-1 ml-4">
+        <li>• <strong className="text-foreground">Decimals = 6</strong> means 1 USDC = 1,000,000 smallest units (same as real USDC)</li>
+        <li>• You can mint unlimited tokens anytime with <code className="text-primary bg-muted px-1 rounded">spl-token mint</code></li>
+        <li>• Only your CLI wallet (mint authority) can create new tokens</li>
+        <li>• Token accounts are created automatically when receiving via <code className="text-primary bg-muted px-1 rounded">--fund-recipient</code></li>
+      </ul>
+    </div>
+
+    <h3 className="text-lg font-semibold text-foreground mb-3 mt-6">Step 6 — Deploy the VeilX Swap Program</h3>
+    <div className="text-sm text-muted-foreground space-y-2 mb-4">
+      <p>The swap program handles SOL↔USDC conversions with Arcium MPC privacy. Deploy it the same way as the other programs:</p>
+    </div>
+    <div className="text-sm text-muted-foreground space-y-2 mb-4">
+      <p>1. Go to <a href="https://beta.solpg.io" target="_blank" rel="noopener noreferrer" className="text-primary underline">beta.solpg.io</a> → <strong className="text-foreground">Create a new project</strong> → name it <code className="text-primary bg-muted px-1 rounded">veilx-swap</code> → select <strong className="text-foreground">Anchor (Rust)</strong>.</p>
+      <p>2. Paste the <strong className="text-foreground">VeilX Swap Program</strong> code from the Smart Contracts tab above into <code className="text-primary bg-muted px-1 rounded">src/lib.rs</code>.</p>
+      <p>3. Click <strong className="text-foreground">Build</strong> (hammer icon) — wait for "Build successful".</p>
+      <p>4. Click <strong className="text-foreground">Deploy</strong> — copy the Program ID.</p>
+      <p>5. Update <code className="text-primary bg-muted px-1 rounded">VEILX_SWAP_PROGRAM</code> in <code className="text-primary bg-muted px-1 rounded">src/config/programs.ts</code> with the deployed ID.</p>
+    </div>
+
+    <h3 className="text-lg font-semibold text-foreground mb-3 mt-6">Step 7 — Initialize the Swap Pool</h3>
+    <div className="text-sm text-muted-foreground space-y-2 mb-4">
+      <p>After deploying, use the <strong className="text-foreground">Test</strong> tab in Solana Playground to call <code className="text-primary bg-muted px-1 rounded">initializePool</code>:</p>
+    </div>
+    <div className="rounded-xl border border-border bg-card p-5 mb-4">
+      <p className="text-sm font-semibold text-foreground mb-3">initializePool — Parameters</p>
+      <table className="w-full text-xs mb-2">
+        <thead>
+          <tr className="text-muted-foreground border-b border-border">
+            <th className="text-left py-2 font-medium">Account</th>
+            <th className="text-left py-2 font-medium">Value</th>
+            <th className="text-left py-2 font-medium">Notes</th>
+          </tr>
+        </thead>
+        <tbody className="text-foreground">
+          <tr className="border-b border-border/50">
+            <td className="py-2 font-mono text-primary">pool</td>
+            <td className="py-2 font-mono">Auto-derived (PDA)</td>
+            <td className="py-2 text-muted-foreground">Seeds: [b"swap_pool"]. Auto-derived by Playground.</td>
+          </tr>
+          <tr className="border-b border-border/50">
+            <td className="py-2 font-mono text-primary">oracle</td>
+            <td className="py-2 font-mono">H6ARHf...QJEG</td>
+            <td className="py-2 text-muted-foreground">Pyth SOL/USD feed address.</td>
+          </tr>
+          <tr className="border-b border-border/50">
+            <td className="py-2 font-mono text-primary">user</td>
+            <td className="py-2 font-mono">Your Playground wallet</td>
+            <td className="py-2 text-muted-foreground">Auto-filled.</td>
+          </tr>
+          <tr className="border-b border-border/50">
+            <td className="py-2 font-mono text-primary">tokenProgram</td>
+            <td className="py-2 font-mono">TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA</td>
+            <td className="py-2 text-muted-foreground">SPL Token Program. Auto-filled.</td>
+          </tr>
+          <tr>
+            <td className="py-2 font-mono text-primary">systemProgram</td>
+            <td className="py-2 font-mono">11111...1111</td>
+            <td className="py-2 text-muted-foreground">Auto-filled.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div className="rounded-xl border border-loss/30 bg-loss/5 p-4 mb-6 text-sm">
+      <p className="text-loss font-semibold mb-1">⚠️ Common Errors & Fixes</p>
+      <ul className="text-muted-foreground space-y-1 ml-4">
+        <li>• <strong className="text-foreground">"Insufficient funds"</strong> — Airdrop more devnet SOL: <code className="text-primary bg-muted px-1 rounded">solana airdrop 2</code></li>
+        <li>• <strong className="text-foreground">"Account already in use"</strong> — Pool already initialized, skip this step</li>
+        <li>• <strong className="text-foreground">"Custom program error 0x1"</strong> — Check the Anchor error codes in the IDL (usually InvalidDirection)</li>
+        <li>• <strong className="text-foreground">"Transaction simulation failed"</strong> — Ensure you're on devnet and the program is deployed</li>
+        <li>• <strong className="text-foreground">"Missing signer"</strong> — Your Playground wallet must be connected (click wallet icon)</li>
+      </ul>
+    </div>
+
+    <div className="rounded-xl border border-profit/30 bg-profit/5 p-4 text-sm">
+      <p className="text-profit font-semibold mb-1">✅ After completing all steps you should have:</p>
+      <ul className="text-muted-foreground space-y-1 ml-4">
+        <li>• <strong className="text-foreground">VeilX Test USDC mint</strong> — your custom SPL token with 6 decimals</li>
+        <li>• <strong className="text-foreground">Token balance</strong> — test USDC in your CLI wallet and/or Phantom</li>
+        <li>• <strong className="text-foreground">VeilX Swap Program</strong> — deployed on devnet with Program ID</li>
+        <li>• <strong className="text-foreground">Swap pool initialized</strong> — ready for SOL↔USDC swaps</li>
+        <li>• <strong className="text-foreground">Updated config</strong> — <code className="text-primary bg-muted px-1 rounded">USDC_MINT</code> and <code className="text-primary bg-muted px-1 rounded">VEILX_SWAP_PROGRAM</code> in programs.ts</li>
+      </ul>
+    </div>
   </>
 );
 
