@@ -128,7 +128,7 @@ const OrderForm = ({ onSubmit, currentPrice, market }: OrderFormProps) => {
           }`}
         >
           <TrendingUp className="h-3.5 w-3.5" />
-          Long
+          Buy
         </button>
         <button
           onClick={() => setSide("short")}
@@ -137,7 +137,7 @@ const OrderForm = ({ onSubmit, currentPrice, market }: OrderFormProps) => {
           }`}
         >
           <TrendingDown className="h-3.5 w-3.5" />
-          Short
+          Sell
         </button>
       </div>
 
@@ -342,7 +342,7 @@ const OrderForm = ({ onSubmit, currentPrice, market }: OrderFormProps) => {
             Connect Wallet
           </span>
         ) : (
-          `${side === "long" ? "Long" : "Short"} ${market.split("/")[0]} — ${orderType === "market" ? "Market" : "Limit"}`
+          `${side === "long" ? "Buy" : "Sell"} ${market.split("/")[0]} — ${orderType === "market" ? "Market" : "Limit"}`
         )}
       </button>
     </div>

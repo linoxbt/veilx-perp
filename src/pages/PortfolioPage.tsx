@@ -1,12 +1,21 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { useConnection } from "@solana/wallet-adapter-react";
+import {
+  PublicKey,
+  Transaction,
+  TransactionInstruction,
+  SystemProgram,
+} from "@solana/web3.js";
+import { toast } from "sonner";
+import { PROGRAM_IDS, USDC_MINT, USDC_DECIMALS } from "@/config/programs";
 import {
   ShieldCheck, Wallet, TrendingUp, ArrowUpRight, BarChart3, History, Eye, Clock,
   ArrowDownToLine, ArrowUpFromLine, Send, Repeat, Landmark, DollarSign,
-  Percent, LineChart, Activity, PieChart, Layers,
+  Percent, LineChart, Activity, PieChart, Layers, Loader2,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
@@ -105,8 +114,8 @@ const PortfolioPage = () => {
               {/* Content */}
               <div className="flex-1 min-w-0">
                 {activeSection === "overview" && <OverviewSection />}
-                {activeSection === "deposit" && <ActionSection title="Deposit" icon={ArrowDownToLine} description="Deposit USDC collateral to start trading on VeilX." />}
-                {activeSection === "withdraw" && <ActionSection title="Withdraw" icon={ArrowUpFromLine} description="Withdraw available margin back to your wallet." />}
+                {activeSection === "deposit" && <DepositSection />}
+                {activeSection === "withdraw" && <WithdrawSection />}
                 {activeSection === "send" && <ActionSection title="Send" icon={Send} description="Transfer assets to another address." />}
                 {activeSection === "swap" && <ActionSection title="Swap Stablecoins" icon={Repeat} description="Swap between USDC, USDT, and other stablecoins." />}
                 {activeSection === "staking" && <ActionSection title="Link Staking" icon={Landmark} description="Stake assets and earn yield while maintaining margin." />}
@@ -250,6 +259,216 @@ function FeesSection() {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+/* ─── Deposit Section ─── */
+function DepositSection() {
+  const { publicKey, sendTransaction, connected } = useWallet();
+  const { connection } = useConnection();
+  const [amount, setAmount] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleDeposit = async () => {
+    if (!publicKey || !connected) return;
+    const amtNum = Number(amount);
+    if (!amtNum || amtNum <= 0) {
+      toast.error("Enter a valid amount");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const programId = new PublicKey(PROGRAM_IDS.VEILX_CORE);
+
+      // Derive user vault PDA
+      const [userVaultPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("user_vault"), publicKey.toBuffer()],
+        programId
+      );
+
+      // Get or create associated token accounts
+      const { getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } = await import("@solana/spl-token");
+
+      const userAta = await getAssociatedTokenAddress(USDC_MINT, publicKey);
+      const vaultAta = await getAssociatedTokenAddress(USDC_MINT, userVaultPda, true);
+
+      const transaction = new Transaction();
+
+      // Check if vault ATA exists, create if not
+      const vaultAtaInfo = await connection.getAccountInfo(vaultAta);
+      if (!vaultAtaInfo) {
+        transaction.add(
+          createAssociatedTokenAccountInstruction(publicKey, vaultAta, userVaultPda, USDC_MINT)
+        );
+      }
+
+      // SPL Token transfer instruction
+      const { createTransferInstruction } = await import("@solana/spl-token");
+      const transferAmount = BigInt(Math.round(amtNum * 10 ** USDC_DECIMALS));
+      transaction.add(
+        createTransferInstruction(userAta, vaultAta, publicKey, transferAmount)
+      );
+
+      transaction.feePayer = publicKey;
+      const sig = await sendTransaction(transaction, connection);
+      await connection.confirmTransaction(sig, "confirmed");
+
+      toast.success(`Deposited ${amtNum} USDC`, {
+        description: `Tx: ${sig.slice(0, 12)}…`,
+      });
+      setAmount("");
+    } catch (err: any) {
+      console.error("Deposit failed:", err);
+      toast.error(err?.message?.includes("insufficient")
+        ? "Insufficient USDC balance"
+        : err?.message || "Deposit failed — check wallet and try again"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-6 space-y-5 max-w-md">
+      <div className="flex items-center gap-3">
+        <ArrowDownToLine className="h-6 w-6 text-primary" />
+        <div>
+          <h2 className="text-lg font-bold text-foreground">Deposit USDC</h2>
+          <p className="text-xs text-muted-foreground">Transfer USDC from your wallet to your VeilX trading account.</p>
+        </div>
+      </div>
+
+      <div>
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Amount (USDC)</label>
+        <input
+          type="number"
+          step="0.01"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder="0.00"
+          className="w-full rounded-lg border border-border bg-muted px-3 py-2.5 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+      </div>
+
+      <button
+        onClick={handleDeposit}
+        disabled={loading || !amount}
+        className="w-full rounded-lg bg-primary py-3 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {loading ? (
+          <span className="flex items-center justify-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Confirming…
+          </span>
+        ) : (
+          "Deposit"
+        )}
+      </button>
+
+      <p className="text-[10px] text-muted-foreground">
+        Devnet USDC mint: <span className="font-mono">{USDC_MINT.toBase58().slice(0, 8)}…</span>
+      </p>
+    </div>
+  );
+}
+
+/* ─── Withdraw Section ─── */
+function WithdrawSection() {
+  const { publicKey, sendTransaction, connected } = useWallet();
+  const { connection } = useConnection();
+  const [amount, setAmount] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleWithdraw = async () => {
+    if (!publicKey || !connected) return;
+    const amtNum = Number(amount);
+    if (!amtNum || amtNum <= 0) {
+      toast.error("Enter a valid amount");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const programId = new PublicKey(PROGRAM_IDS.VEILX_CORE);
+
+      const [userVaultPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("user_vault"), publicKey.toBuffer()],
+        programId
+      );
+
+      const { getAssociatedTokenAddress, createTransferInstruction } = await import("@solana/spl-token");
+
+      const userAta = await getAssociatedTokenAddress(USDC_MINT, publicKey);
+      const vaultAta = await getAssociatedTokenAddress(USDC_MINT, userVaultPda, true);
+
+      const transferAmount = BigInt(Math.round(amtNum * 10 ** USDC_DECIMALS));
+      const transaction = new Transaction();
+
+      // In production, this would be a program CPI withdrawal requiring PDA signature.
+      // For devnet, we construct a transfer from vault ATA back to user ATA,
+      // which requires the program to sign via CPI (will fail without deployed program logic).
+      transaction.add(
+        createTransferInstruction(vaultAta, userAta, userVaultPda, transferAmount)
+      );
+
+      transaction.feePayer = publicKey;
+      const sig = await sendTransaction(transaction, connection);
+      await connection.confirmTransaction(sig, "confirmed");
+
+      toast.success(`Withdrew ${amtNum} USDC`, {
+        description: `Tx: ${sig.slice(0, 12)}…`,
+      });
+      setAmount("");
+    } catch (err: any) {
+      console.error("Withdraw failed:", err);
+      toast.error(err?.message || "Withdraw failed — ensure you have sufficient deposited balance");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-6 space-y-5 max-w-md">
+      <div className="flex items-center gap-3">
+        <ArrowUpFromLine className="h-6 w-6 text-primary" />
+        <div>
+          <h2 className="text-lg font-bold text-foreground">Withdraw USDC</h2>
+          <p className="text-xs text-muted-foreground">Withdraw available margin back to your wallet.</p>
+        </div>
+      </div>
+
+      <div>
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Amount (USDC)</label>
+        <input
+          type="number"
+          step="0.01"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder="0.00"
+          className="w-full rounded-lg border border-border bg-muted px-3 py-2.5 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+      </div>
+
+      <button
+        onClick={handleWithdraw}
+        disabled={loading || !amount}
+        className="w-full rounded-lg bg-primary py-3 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {loading ? (
+          <span className="flex items-center justify-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Confirming…
+          </span>
+        ) : (
+          "Withdraw"
+        )}
+      </button>
+
+      <p className="text-[10px] text-muted-foreground">
+        Withdrawals require available (unreserved) margin.
+      </p>
     </div>
   );
 }
