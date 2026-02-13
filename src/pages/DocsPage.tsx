@@ -7,6 +7,7 @@ const TABS = [
   { id: "overview", label: "Overview", icon: BookOpen },
   { id: "architecture", label: "Architecture", icon: Layers },
   { id: "contracts", label: "Smart Contracts", icon: FileCode },
+  { id: "testing", label: "Testing Guide", icon: Server },
   { id: "deployment", label: "Deployment Guide", icon: Rocket },
   { id: "security", label: "Security", icon: Shield },
 ] as const;
@@ -64,6 +65,7 @@ const DocsPage = () => {
             {activeTab === "overview" && <OverviewTab />}
             {activeTab === "architecture" && <ArchitectureTab />}
             {activeTab === "contracts" && <ContractsTab />}
+            {activeTab === "testing" && <TestingTab />}
             {activeTab === "deployment" && <DeploymentTab />}
             {activeTab === "security" && <SecurityTab />}
           </main>
@@ -346,12 +348,13 @@ fn verify_pnl_proof(
 /* ── Account validation structs ───────────────── */
 
 #[derive(Accounts)]
+#[instruction(market_params: MarketParams)]
 pub struct InitializeMarket<'info> {
     #[account(
         init,
         payer = authority,
         space = 8 + std::mem::size_of::<Market>(),
-        seeds = [b"market", authority.key().as_ref()],
+        seeds = [b"market", &market_params.base_symbol],
         bump
     )]
     pub market: Account<'info, Market>,
@@ -864,6 +867,330 @@ pub enum LiquidationError {
     InvalidProof,
 }`}
     />
+  </>
+);
+
+const TestingTab = () => (
+  <>
+    <DocSection title="Testing on Solana Playground">
+      <p>
+        After deploying all 3 programs, use Solana Playground's <strong className="text-foreground">Test</strong> tab to call initialization instructions. The Test tab auto-generates a UI from the program's IDL — each instruction parameter appears as a form field.
+      </p>
+      <p>
+        <strong className="text-foreground">Important:</strong> Solana Playground lets you type any value into parameter fields. Use the exact values documented below — incorrect values will cause transactions to fail or create misconfigured accounts.
+      </p>
+    </DocSection>
+
+    <h3 className="text-lg font-semibold text-foreground mb-3">1. Initialize Markets (veilx-core)</h3>
+    <div className="text-sm text-muted-foreground space-y-2 mb-4">
+      <p>Open the <strong className="text-foreground">veilx-core</strong> project in Solana Playground. Go to the <strong className="text-foreground">Test</strong> tab (flask icon). You'll see a list of instructions from the IDL. Click <strong className="text-foreground">initializeMarket</strong>.</p>
+    </div>
+
+    <div className="rounded-xl border border-border bg-card p-5 mb-4">
+      <p className="text-sm font-semibold text-foreground mb-3">Parameter Fields — What to Enter</p>
+      <p className="text-xs text-muted-foreground mb-3">The <code className="text-primary bg-muted px-1 rounded">market_params</code> argument is a struct. Playground shows each field separately:</p>
+      <table className="w-full text-xs mb-2">
+        <thead>
+          <tr className="text-muted-foreground border-b border-border">
+            <th className="text-left py-2 font-medium">Field</th>
+            <th className="text-left py-2 font-medium">Type</th>
+            <th className="text-left py-2 font-medium">Value for SOL/USD</th>
+            <th className="text-left py-2 font-medium">Explanation</th>
+          </tr>
+        </thead>
+        <tbody className="text-foreground">
+          <tr className="border-b border-border/50">
+            <td className="py-2 font-mono text-primary">oracle</td>
+            <td className="py-2 font-mono">PublicKey</td>
+            <td className="py-2 font-mono text-profit">H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG</td>
+            <td className="py-2 text-muted-foreground">Pyth SOL/USD devnet feed</td>
+          </tr>
+          <tr className="border-b border-border/50">
+            <td className="py-2 font-mono text-primary">base_symbol</td>
+            <td className="py-2 font-mono">[u8; 8]</td>
+            <td className="py-2 font-mono text-profit">[83, 79, 76, 47, 85, 83, 68, 0]</td>
+            <td className="py-2 text-muted-foreground">UTF-8 bytes of "SOL/USD" + null pad to 8</td>
+          </tr>
+          <tr className="border-b border-border/50">
+            <td className="py-2 font-mono text-primary">max_leverage</td>
+            <td className="py-2 font-mono">u16</td>
+            <td className="py-2 font-mono text-profit">50</td>
+            <td className="py-2 text-muted-foreground">Maximum leverage (50x)</td>
+          </tr>
+          <tr className="border-b border-border/50">
+            <td className="py-2 font-mono text-primary">maintenance_margin</td>
+            <td className="py-2 font-mono">u16</td>
+            <td className="py-2 font-mono text-profit">500</td>
+            <td className="py-2 text-muted-foreground">5% in basis points</td>
+          </tr>
+          <tr className="border-b border-border/50">
+            <td className="py-2 font-mono text-primary">taker_fee</td>
+            <td className="py-2 font-mono">u16</td>
+            <td className="py-2 font-mono text-profit">5</td>
+            <td className="py-2 text-muted-foreground">0.05% in basis points</td>
+          </tr>
+          <tr>
+            <td className="py-2 font-mono text-primary">maker_fee</td>
+            <td className="py-2 font-mono">u16</td>
+            <td className="py-2 font-mono text-profit">2</td>
+            <td className="py-2 text-muted-foreground">0.02% in basis points</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div className="rounded-xl border border-border bg-card p-5 mb-4">
+      <p className="text-sm font-semibold text-foreground mb-3">Accounts — Auto-Derived</p>
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="text-muted-foreground border-b border-border">
+            <th className="text-left py-2 font-medium">Account</th>
+            <th className="text-left py-2 font-medium">Value</th>
+            <th className="text-left py-2 font-medium">Notes</th>
+          </tr>
+        </thead>
+        <tbody className="text-foreground">
+          <tr className="border-b border-border/50">
+            <td className="py-2 font-mono text-primary">market</td>
+            <td className="py-2 font-mono">Auto-derived (PDA)</td>
+            <td className="py-2 text-muted-foreground">Seeds: [b"market", base_symbol]. Auto-derived by Playground.</td>
+          </tr>
+          <tr className="border-b border-border/50">
+            <td className="py-2 font-mono text-primary">authority</td>
+            <td className="py-2 font-mono">Your Playground wallet</td>
+            <td className="py-2 text-muted-foreground">Auto-filled.</td>
+          </tr>
+          <tr>
+            <td className="py-2 font-mono text-primary">systemProgram</td>
+            <td className="py-2 font-mono">11111...1111</td>
+            <td className="py-2 text-muted-foreground">Auto-filled.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 mb-6 text-sm">
+      <p className="text-primary font-semibold mb-1">💡 base_symbol Byte Arrays for Each Market</p>
+      <p className="text-muted-foreground mb-2">Playground expects <code className="text-primary bg-muted px-1 rounded">[u8; 8]</code> as a JSON array of numbers:</p>
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="text-muted-foreground border-b border-border">
+            <th className="text-left py-1.5 font-medium">Market</th>
+            <th className="text-left py-1.5 font-medium">base_symbol bytes</th>
+            <th className="text-left py-1.5 font-medium">Pyth Oracle</th>
+          </tr>
+        </thead>
+        <tbody className="text-foreground font-mono text-[10px]">
+          <tr className="border-b border-border/50">
+            <td className="py-1.5">SOL/USD</td>
+            <td className="py-1.5 text-profit">[83, 79, 76, 47, 85, 83, 68, 0]</td>
+            <td className="py-1.5">H6ARHf...AQJEG</td>
+          </tr>
+          <tr className="border-b border-border/50">
+            <td className="py-1.5">ETH/USD</td>
+            <td className="py-1.5 text-profit">[69, 84, 72, 47, 85, 83, 68, 0]</td>
+            <td className="py-1.5">JBu1AL...iWdB</td>
+          </tr>
+          <tr className="border-b border-border/50">
+            <td className="py-1.5">BTC/USD</td>
+            <td className="py-1.5 text-profit">[66, 84, 67, 47, 85, 83, 68, 0]</td>
+            <td className="py-1.5">GVXRSBj...MJFi</td>
+          </tr>
+          <tr>
+            <td className="py-1.5">ARB/USD</td>
+            <td className="py-1.5 text-profit">[65, 82, 66, 47, 85, 83, 68, 0]</td>
+            <td className="py-1.5">4mRGHz...SBZE</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div className="text-sm text-muted-foreground space-y-2 mb-6">
+      <p><strong className="text-foreground">How to run:</strong> Fill in all fields, then click <strong className="text-foreground">"Test"</strong>. The transaction is signed by your Playground wallet and sent to devnet. Green checkmark = success. Repeat for each market — change <code className="text-primary bg-muted px-1 rounded">oracle</code> and <code className="text-primary bg-muted px-1 rounded">base_symbol</code> each time.</p>
+    </div>
+
+    <h3 className="text-lg font-semibold text-foreground mb-3 mt-8">2. Initialize MPC Bridge (veilx-mpc-bridge)</h3>
+    <div className="text-sm text-muted-foreground space-y-2 mb-4">
+      <p>Switch to <strong className="text-foreground">veilx-mpc-bridge</strong> project → Test tab → click <strong className="text-foreground">initialize</strong>.</p>
+    </div>
+
+    <div className="rounded-xl border border-border bg-card p-5 mb-4">
+      <p className="text-sm font-semibold text-foreground mb-3">Parameter Fields</p>
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="text-muted-foreground border-b border-border">
+            <th className="text-left py-2 font-medium">Field</th>
+            <th className="text-left py-2 font-medium">Type</th>
+            <th className="text-left py-2 font-medium">Value</th>
+            <th className="text-left py-2 font-medium">Explanation</th>
+          </tr>
+        </thead>
+        <tbody className="text-foreground">
+          <tr className="border-b border-border/50">
+            <td className="py-2 font-mono text-primary">threshold</td>
+            <td className="py-2 font-mono">u8</td>
+            <td className="py-2 font-mono text-profit">3</td>
+            <td className="py-2 text-muted-foreground">Minimum MPC nodes needed (3-of-5)</td>
+          </tr>
+          <tr>
+            <td className="py-2 font-mono text-primary">node_count</td>
+            <td className="py-2 font-mono">u8</td>
+            <td className="py-2 font-mono text-profit">5</td>
+            <td className="py-2 text-muted-foreground">Total MPC nodes in cluster</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div className="rounded-xl border border-border bg-card p-5 mb-6">
+      <p className="text-sm font-semibold text-foreground mb-3">Accounts</p>
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="text-muted-foreground border-b border-border">
+            <th className="text-left py-2 font-medium">Account</th>
+            <th className="text-left py-2 font-medium">Value</th>
+            <th className="text-left py-2 font-medium">Notes</th>
+          </tr>
+        </thead>
+        <tbody className="text-foreground">
+          <tr className="border-b border-border/50">
+            <td className="py-2 font-mono text-primary">config</td>
+            <td className="py-2 font-mono">Auto-derived (PDA)</td>
+            <td className="py-2 text-muted-foreground">Seeds: [b"mpc_config"]. Auto-derived.</td>
+          </tr>
+          <tr className="border-b border-border/50">
+            <td className="py-2 font-mono text-primary">authority</td>
+            <td className="py-2 font-mono">Your Playground wallet</td>
+            <td className="py-2 text-muted-foreground">Auto-filled.</td>
+          </tr>
+          <tr>
+            <td className="py-2 font-mono text-primary">systemProgram</td>
+            <td className="py-2 font-mono">11111...1111</td>
+            <td className="py-2 text-muted-foreground">Auto-filled.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 className="text-lg font-semibold text-foreground mb-3 mt-8">3. Initialize Liquidation Engine (veilx-liquidation)</h3>
+    <div className="text-sm text-muted-foreground space-y-2 mb-4">
+      <p>Switch to <strong className="text-foreground">veilx-liquidation</strong> project → Test tab → click <strong className="text-foreground">initialize</strong>.</p>
+    </div>
+
+    <div className="rounded-xl border border-border bg-card p-5 mb-4">
+      <p className="text-sm font-semibold text-foreground mb-3">Parameter Fields</p>
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="text-muted-foreground border-b border-border">
+            <th className="text-left py-2 font-medium">Field</th>
+            <th className="text-left py-2 font-medium">Type</th>
+            <th className="text-left py-2 font-medium">Value</th>
+            <th className="text-left py-2 font-medium">Explanation</th>
+          </tr>
+        </thead>
+        <tbody className="text-foreground">
+          <tr className="border-b border-border/50">
+            <td className="py-2 font-mono text-primary">liquidation_fee</td>
+            <td className="py-2 font-mono">u16</td>
+            <td className="py-2 font-mono text-profit">250</td>
+            <td className="py-2 text-muted-foreground">2.5% penalty in basis points</td>
+          </tr>
+          <tr>
+            <td className="py-2 font-mono text-primary">insurance_share</td>
+            <td className="py-2 font-mono">u16</td>
+            <td className="py-2 font-mono text-profit">50</td>
+            <td className="py-2 text-muted-foreground">50% of fee goes to insurance fund</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div className="rounded-xl border border-border bg-card p-5 mb-6">
+      <p className="text-sm font-semibold text-foreground mb-3">Accounts</p>
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="text-muted-foreground border-b border-border">
+            <th className="text-left py-2 font-medium">Account</th>
+            <th className="text-left py-2 font-medium">Value</th>
+            <th className="text-left py-2 font-medium">Notes</th>
+          </tr>
+        </thead>
+        <tbody className="text-foreground">
+          <tr className="border-b border-border/50">
+            <td className="py-2 font-mono text-primary">config</td>
+            <td className="py-2 font-mono">Auto-derived (PDA)</td>
+            <td className="py-2 text-muted-foreground">Seeds: [b"liq_config"]. Auto-derived.</td>
+          </tr>
+          <tr className="border-b border-border/50">
+            <td className="py-2 font-mono text-primary">authority</td>
+            <td className="py-2 font-mono">Your Playground wallet</td>
+            <td className="py-2 text-muted-foreground">Auto-filled.</td>
+          </tr>
+          <tr>
+            <td className="py-2 font-mono text-primary">systemProgram</td>
+            <td className="py-2 font-mono">11111...1111</td>
+            <td className="py-2 text-muted-foreground">Auto-filled.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 className="text-lg font-semibold text-foreground mb-3 mt-8">4. Verify Initialization</h3>
+    <div className="text-sm text-muted-foreground space-y-2 mb-4">
+      <p>After each successful call, Playground shows a <strong className="text-profit">green checkmark</strong> and tx signature. Optionally verify via CLI:</p>
+    </div>
+    <CodeBlock title="Verify on CLI (optional)" language="bash" code={`# Check market account exists
+solana account <MARKET_PDA_ADDRESS> --url devnet
+
+# Check MPC config
+solana account <MPC_CONFIG_PDA> --url devnet
+
+# Check liquidation config
+solana account <LIQ_CONFIG_PDA> --url devnet`} />
+
+    <div className="rounded-xl border border-profit/30 bg-profit/5 p-4 mb-6 text-sm">
+      <p className="text-profit font-semibold mb-1">✅ After completing all initializations:</p>
+      <ul className="text-muted-foreground space-y-1 ml-4">
+        <li>• <strong className="text-foreground">4 initialized markets</strong> — SOL/USD, ETH/USD, BTC/USD, ARB/USD</li>
+        <li>• <strong className="text-foreground">1 MPC bridge config</strong> — threshold=3, node_count=5</li>
+        <li>• <strong className="text-foreground">1 liquidation engine config</strong> — fee=250 bps, insurance_share=50%</li>
+      </ul>
+    </div>
+
+    <h3 className="text-lg font-semibold text-foreground mb-3 mt-8">Common Errors</h3>
+    <div className="rounded-xl border border-border bg-card overflow-hidden mb-6">
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="border-b border-border bg-secondary/30">
+            <th className="text-left p-3 font-medium text-foreground">Error</th>
+            <th className="text-left p-3 font-medium text-foreground">Cause</th>
+            <th className="text-left p-3 font-medium text-foreground">Fix</th>
+          </tr>
+        </thead>
+        <tbody className="text-muted-foreground">
+          <tr className="border-b border-border/50">
+            <td className="p-3 font-mono text-loss">Account already in use</td>
+            <td className="p-3">PDA already initialized</td>
+            <td className="p-3 text-foreground">Already created — skip this step.</td>
+          </tr>
+          <tr className="border-b border-border/50">
+            <td className="p-3 font-mono text-loss">Insufficient funds</td>
+            <td className="p-3">Not enough SOL for rent</td>
+            <td className="p-3 text-foreground">Click "Airdrop" for more devnet SOL.</td>
+          </tr>
+          <tr className="border-b border-border/50">
+            <td className="p-3 font-mono text-loss">Simulation failed</td>
+            <td className="p-3">Wrong parameter types/values</td>
+            <td className="p-3 text-foreground">Double-check values match the tables above exactly.</td>
+          </tr>
+          <tr>
+            <td className="p-3 font-mono text-loss">Custom program error</td>
+            <td className="p-3">Program logic rejection</td>
+            <td className="p-3 text-foreground">Check error code in IDL errors section.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </>
 );
 
