@@ -17,9 +17,12 @@ import {
   ShieldCheck, Wallet, TrendingUp, ArrowUpRight, BarChart3, History, Eye, Clock,
   ArrowDownToLine, ArrowUpFromLine, Repeat, DollarSign,
   Percent, LineChart, Activity, PieChart, Loader2, Droplets, RefreshCw,
+  AlertTriangle, Zap,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import FundingRateDisplay from "@/components/FundingRateDisplay";
+import LiquidationDashboard from "@/components/LiquidationDashboard";
+import OrderMatchingViz from "@/components/OrderMatchingViz";
 
 /* ─── Balance Hook ─── */
 function useWalletBalances() {
@@ -92,6 +95,8 @@ const PortfolioPage = () => {
     { id: "swap", label: "Swap SOL ↔ USDC", icon: Repeat },
     { id: "perps", label: "Perpetuals", icon: TrendingUp },
     { id: "funding", label: "Funding Rates", icon: Activity },
+    { id: "liquidation", label: "Liquidation", icon: AlertTriangle },
+    { id: "order-matching", label: "Order Matching", icon: Zap },
     { id: "fees", label: "Fees", icon: Percent },
   ];
 
@@ -162,6 +167,8 @@ const PortfolioPage = () => {
                 {activeSection === "swap" && <SwapSection />}
                 {activeSection === "perps" && <PerpsSection />}
                 {activeSection === "funding" && <FundingSection />}
+                {activeSection === "liquidation" && <LiquidationDashboard />}
+                {activeSection === "order-matching" && <OrderMatchingViz />}
                 {activeSection === "fees" && <FeesSection />}
               </div>
             </div>
