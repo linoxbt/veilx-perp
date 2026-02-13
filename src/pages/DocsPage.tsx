@@ -907,15 +907,15 @@ pub mod veilx_swap {
         amount: u64,
         direction: u8, // 0 = SOL→USDC, 1 = USDC→SOL
     ) -> Result<()> {
-        // In production, amount is encrypted and verified by MPC.
-        // The MPC network fetches Pyth oracle price privately
-        // and computes output on ciphertext.
         require!(direction <= 1, SwapError::InvalidDirection);
 
-        let pool = &mut ctx.accounts.pool;
+        // Read pool state BEFORE any mutable borrow to avoid E0502
+        let pool_bump = ctx.accounts.pool.bump;
+        let sol_reserve = ctx.accounts.pool.sol_reserve;
+        let usdc_reserve = ctx.accounts.pool.usdc_reserve;
 
         if direction == 0 {
-            // SOL → USDC
+            // SOL → USDC: transfer SOL from user to pool vault
             system_program::transfer(
                 CpiContext::new(
                     ctx.accounts.system_program.to_account_info(),
@@ -927,11 +927,10 @@ pub mod veilx_swap {
                 amount,
             )?;
 
-            let usdc_output = calculate_output(
-                amount, pool.sol_reserve, pool.usdc_reserve
-            );
+            let usdc_output = calculate_output(amount, sol_reserve, usdc_reserve);
 
-            let seeds = &[b"pool".as_ref(), &[pool.bump]];
+            // Use pool_bump (copied earlier) to avoid borrowing pool during CPI
+            let seeds = &[b"pool".as_ref(), &[pool_bump]];
             let signer = &[&seeds[..]];
             token::transfer(
                 CpiContext::new_with_signer(
@@ -946,10 +945,12 @@ pub mod veilx_swap {
                 usdc_output,
             )?;
 
+            // NOW mutably borrow pool to update reserves
+            let pool = &mut ctx.accounts.pool;
             pool.sol_reserve += amount;
             pool.usdc_reserve -= usdc_output;
         } else {
-            // USDC → SOL
+            // USDC → SOL: transfer USDC from user to pool vault
             token::transfer(
                 CpiContext::new(
                     ctx.accounts.token_program.to_account_info(),
@@ -962,19 +963,21 @@ pub mod veilx_swap {
                 amount,
             )?;
 
-            let sol_output = calculate_output(
-                amount, pool.usdc_reserve, pool.sol_reserve
-            );
+            let sol_output = calculate_output(amount, usdc_reserve, sol_reserve);
 
             **ctx.accounts.pool_sol_vault
                 .try_borrow_mut_lamports()? -= sol_output;
             **ctx.accounts.user
                 .try_borrow_mut_lamports()? += sol_output;
 
+            // NOW mutably borrow pool to update reserves
+            let pool = &mut ctx.accounts.pool;
             pool.usdc_reserve += amount;
             pool.sol_reserve -= sol_output;
         }
 
+        // Final mutable borrow for total_swaps + event
+        let pool = &mut ctx.accounts.pool;
         pool.total_swaps += 1;
         emit!(SwapExecuted {
             user: ctx.accounts.user.key(),
