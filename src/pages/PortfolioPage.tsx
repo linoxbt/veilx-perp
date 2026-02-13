@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -16,9 +16,54 @@ import { PROGRAM_IDS, USDC_MINT, USDC_DECIMALS, NATIVE_SOL_MINT, SOL_DECIMALS, V
 import {
   ShieldCheck, Wallet, TrendingUp, ArrowUpRight, BarChart3, History, Eye, Clock,
   ArrowDownToLine, ArrowUpFromLine, Send, Repeat, Landmark, DollarSign,
-  Percent, LineChart, Activity, PieChart, Layers, Loader2,
+  Percent, LineChart, Activity, PieChart, Layers, Loader2, Droplets, RefreshCw,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+
+/* ─── Balance Hook ─── */
+function useWalletBalances() {
+  const { publicKey, connected } = useWallet();
+  const { connection } = useConnection();
+  const [solBalance, setSolBalance] = useState<number | null>(null);
+  const [usdcBalance, setUsdcBalance] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const fetchBalances = useCallback(async () => {
+    if (!publicKey || !connected) {
+      setSolBalance(null);
+      setUsdcBalance(null);
+      return;
+    }
+    setLoading(true);
+    try {
+      // SOL balance
+      const lamports = await connection.getBalance(publicKey);
+      setSolBalance(lamports / LAMPORTS_PER_SOL);
+
+      // USDC balance
+      try {
+        const { getAssociatedTokenAddress } = await import("@solana/spl-token");
+        const ata = await getAssociatedTokenAddress(USDC_MINT, publicKey);
+        const info = await connection.getTokenAccountBalance(ata);
+        setUsdcBalance(Number(info.value.uiAmount));
+      } catch {
+        setUsdcBalance(0); // No ATA = 0 balance
+      }
+    } catch (err) {
+      console.error("Balance fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [publicKey, connected, connection]);
+
+  useEffect(() => {
+    fetchBalances();
+    const interval = setInterval(fetchBalances, 15000); // refresh every 15s
+    return () => clearInterval(interval);
+  }, [fetchBalances]);
+
+  return { solBalance, usdcBalance, loading, refresh: fetchBalances };
+}
 
 const EmptyState = ({ icon: Icon, message }: { icon: any; message: string }) => (
   <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
@@ -271,6 +316,52 @@ function DepositSection() {
   const [amount, setAmount] = useState("");
   const [asset, setAsset] = useState<"SOL" | "USDC">("SOL");
   const [loading, setLoading] = useState(false);
+  const [faucetLoading, setFaucetLoading] = useState(false);
+  const { solBalance, usdcBalance, loading: balLoading, refresh } = useWalletBalances();
+
+  const handleFaucetMint = async () => {
+    if (!publicKey || !connected) return;
+    setFaucetLoading(true);
+    try {
+      const { getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, createMintToInstruction, getAccount } = await import("@solana/spl-token");
+      const ata = await getAssociatedTokenAddress(USDC_MINT, publicKey);
+      const transaction = new Transaction();
+
+      // Create ATA if it doesn't exist
+      try {
+        await getAccount(connection, ata);
+      } catch {
+        transaction.add(
+          createAssociatedTokenAccountInstruction(publicKey, ata, publicKey, USDC_MINT)
+        );
+      }
+
+      // Mint 10,000 test USDC (requires mint authority = connected wallet)
+      const mintAmount = BigInt(10_000 * 10 ** USDC_DECIMALS);
+      transaction.add(
+        createMintToInstruction(USDC_MINT, ata, publicKey, mintAmount)
+      );
+
+      transaction.feePayer = publicKey;
+      const sig = await sendTransaction(transaction, connection);
+      await connection.confirmTransaction(sig, "confirmed");
+
+      toast.success("Minted 10,000 test USDC!", {
+        description: `Tx: ${sig.slice(0, 12)}…`,
+      });
+      refresh();
+    } catch (err: any) {
+      console.error("Faucet mint failed:", err);
+      const msg = err?.message || "";
+      if (msg.includes("mint authority") || msg.includes("owner")) {
+        toast.error("Faucet failed — your wallet must be the mint authority for VeilX Test USDC. See docs for setup.");
+      } else {
+        toast.error(msg || "Faucet mint failed");
+      }
+    } finally {
+      setFaucetLoading(false);
+    }
+  };
 
   const handleDeposit = async () => {
     if (!publicKey || !connected) return;
@@ -286,18 +377,12 @@ function DepositSection() {
       const transaction = new Transaction();
 
       if (asset === "SOL") {
-        // Derive user vault PDA
         const [userVaultPda] = PublicKey.findProgramAddressSync(
           [Buffer.from("user_vault"), publicKey.toBuffer()],
           programId
         );
-
-        // Transfer SOL to the vault PDA via system program
-        // In production, the program CPI wraps to wSOL and deposits.
-        // The deposit instruction discriminator for SOL deposits.
         const depositLamports = BigInt(Math.round(amtNum * LAMPORTS_PER_SOL));
-
-        const discriminator = Buffer.from([0xf8, 0xc6, 0x9e, 0x91, 0xe1, 0x75, 0x87, 0xc8]); // deposit_sol
+        const discriminator = Buffer.from([0xf8, 0xc6, 0x9e, 0x91, 0xe1, 0x75, 0x87, 0xc8]);
         const amountBuffer = Buffer.alloc(8);
         amountBuffer.writeBigUInt64LE(depositLamports);
 
@@ -313,24 +398,19 @@ function DepositSection() {
           })
         );
       } else {
-        // USDC deposit via SPL token transfer
         const [userVaultPda] = PublicKey.findProgramAddressSync(
           [Buffer.from("user_vault"), publicKey.toBuffer()],
           programId
         );
-
         const { getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, createTransferInstruction } = await import("@solana/spl-token");
-
         const userAta = await getAssociatedTokenAddress(USDC_MINT, publicKey);
         const vaultAta = await getAssociatedTokenAddress(USDC_MINT, userVaultPda, true);
-
         const vaultAtaInfo = await connection.getAccountInfo(vaultAta);
         if (!vaultAtaInfo) {
           transaction.add(
             createAssociatedTokenAccountInstruction(publicKey, vaultAta, userVaultPda, USDC_MINT)
           );
         }
-
         const transferAmount = BigInt(Math.round(amtNum * 10 ** USDC_DECIMALS));
         transaction.add(
           createTransferInstruction(userAta, vaultAta, publicKey, transferAmount)
@@ -345,6 +425,7 @@ function DepositSection() {
         description: `Tx: ${sig.slice(0, 12)}…`,
       });
       setAmount("");
+      refresh();
     } catch (err: any) {
       console.error("Deposit failed:", err);
       toast.error(err?.message?.includes("insufficient")
@@ -363,6 +444,30 @@ function DepositSection() {
         <div>
           <h2 className="text-lg font-bold text-foreground">Deposit</h2>
           <p className="text-xs text-muted-foreground">Deposit SOL or USDC into your VeilX trading account.</p>
+        </div>
+      </div>
+
+      {/* Wallet Balances */}
+      <div className="rounded-lg border border-border bg-muted/50 p-3">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Wallet Balances</span>
+          <button onClick={refresh} disabled={balLoading} className="text-muted-foreground hover:text-foreground transition-colors">
+            <RefreshCw className={`h-3 w-3 ${balLoading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <span className="text-[10px] text-muted-foreground">SOL</span>
+            <p className="text-sm font-mono font-semibold text-foreground">
+              {solBalance !== null ? solBalance.toFixed(4) : "—"}
+            </p>
+          </div>
+          <div className="flex-1">
+            <span className="text-[10px] text-muted-foreground">USDC</span>
+            <p className="text-sm font-mono font-semibold text-foreground">
+              {usdcBalance !== null ? usdcBalance.toFixed(2) : "—"}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -390,7 +495,19 @@ function DepositSection() {
       </div>
 
       <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1 block">Amount ({asset})</label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-xs font-medium text-muted-foreground">Amount ({asset})</label>
+          {asset === "SOL" && solBalance !== null && (
+            <button onClick={() => setAmount(String(Math.max(0, solBalance - 0.01).toFixed(4)))} className="text-[10px] text-primary hover:underline">
+              Max: {solBalance.toFixed(4)}
+            </button>
+          )}
+          {asset === "USDC" && usdcBalance !== null && (
+            <button onClick={() => setAmount(String(usdcBalance.toFixed(2)))} className="text-[10px] text-primary hover:underline">
+              Max: {usdcBalance.toFixed(2)}
+            </button>
+          )}
+        </div>
         <input
           type="number"
           step={asset === "SOL" ? "0.001" : "0.01"}
@@ -416,11 +533,35 @@ function DepositSection() {
         )}
       </button>
 
+      {/* Faucet Button */}
+      <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <Droplets className="h-4 w-4 text-primary" />
+          <span className="text-xs font-semibold text-foreground">Test USDC Faucet</span>
+        </div>
+        <p className="text-[10px] text-muted-foreground">
+          Mint 10,000 VeilX test USDC to your wallet. Your wallet must be the mint authority (see docs).
+        </p>
+        <button
+          onClick={handleFaucetMint}
+          disabled={faucetLoading || !connected}
+          className="w-full rounded-lg border border-primary/30 bg-primary/10 py-2 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {faucetLoading ? (
+            <span className="flex items-center justify-center gap-2">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Minting…
+            </span>
+          ) : (
+            "Mint 10,000 Test USDC"
+          )}
+        </button>
+      </div>
+
       <div className="text-[10px] text-muted-foreground space-y-1">
         {asset === "USDC" && (
-          <p>VeilX Test USDC mint: <span className="font-mono">{USDC_MINT.toBase58().slice(0, 12)}…</span></p>
+          <p>VeilX Test USDC mint: <span className="font-mono">{USDC_MINT.toBase58().slice(0, 16)}…</span></p>
         )}
-        <p>Faucet: Use <span className="font-mono text-foreground">spl-token mint {'<MINT>'} {'<AMOUNT>'}</span> to mint test USDC.</p>
       </div>
     </div>
   );
@@ -531,8 +672,10 @@ function SwapSection() {
   const [fromAsset, setFromAsset] = useState<"SOL" | "USDC">("SOL");
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
+  const { solBalance, usdcBalance, loading: balLoading, refresh } = useWalletBalances();
 
   const toAsset = fromAsset === "SOL" ? "USDC" : "SOL";
+  const currentBalance = fromAsset === "SOL" ? solBalance : usdcBalance;
 
   const handleSwap = async () => {
     if (!publicKey || !connected) return;
@@ -545,23 +688,16 @@ function SwapSection() {
     setLoading(true);
     try {
       const programId = new PublicKey(VEILX_SWAP_PROGRAM);
-
-      // Derive swap vault PDA
       const [swapVaultPda] = PublicKey.findProgramAddressSync(
         [Buffer.from("swap_vault"), publicKey.toBuffer()],
         programId
       );
 
-      // Build the swap instruction with MPC encryption
-      // Discriminator: swap_encrypted
       const discriminator = Buffer.from([0xa1, 0xb2, 0xc3, 0xd4, 0xe5, 0xf6, 0x07, 0x18]);
-
       const decimals = fromAsset === "SOL" ? SOL_DECIMALS : USDC_DECIMALS;
       const swapAmount = BigInt(Math.round(amtNum * 10 ** decimals));
       const amountBuffer = Buffer.alloc(8);
       amountBuffer.writeBigUInt64LE(swapAmount);
-
-      // Direction flag: 0 = SOL→USDC, 1 = USDC→SOL
       const directionBuffer = Buffer.from([fromAsset === "SOL" ? 0 : 1]);
 
       const { getAssociatedTokenAddress } = await import("@solana/spl-token");
@@ -592,6 +728,7 @@ function SwapSection() {
         description: `Tx: ${sig.slice(0, 12)}…`,
       });
       setAmount("");
+      refresh();
     } catch (err: any) {
       console.error("Swap failed:", err);
       toast.error(err?.message || "Swap failed — ensure the swap program is deployed");
@@ -607,6 +744,30 @@ function SwapSection() {
         <div>
           <h2 className="text-lg font-bold text-foreground">Swap SOL ↔ USDC</h2>
           <p className="text-xs text-muted-foreground">On-chain swap protected by Arcium MPC encryption.</p>
+        </div>
+      </div>
+
+      {/* Wallet Balances */}
+      <div className="rounded-lg border border-border bg-muted/50 p-3">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Wallet Balances</span>
+          <button onClick={refresh} disabled={balLoading} className="text-muted-foreground hover:text-foreground transition-colors">
+            <RefreshCw className={`h-3 w-3 ${balLoading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <span className="text-[10px] text-muted-foreground">SOL</span>
+            <p className="text-sm font-mono font-semibold text-foreground">
+              {solBalance !== null ? solBalance.toFixed(4) : "—"}
+            </p>
+          </div>
+          <div className="flex-1">
+            <span className="text-[10px] text-muted-foreground">USDC</span>
+            <p className="text-sm font-mono font-semibold text-foreground">
+              {usdcBalance !== null ? usdcBalance.toFixed(2) : "—"}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -642,7 +803,17 @@ function SwapSection() {
       </div>
 
       <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1 block">Amount ({fromAsset})</label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-xs font-medium text-muted-foreground">Amount ({fromAsset})</label>
+          {currentBalance !== null && (
+            <button
+              onClick={() => setAmount(String(fromAsset === "SOL" ? Math.max(0, currentBalance - 0.01).toFixed(4) : currentBalance.toFixed(2)))}
+              className="text-[10px] text-primary hover:underline"
+            >
+              Max: {fromAsset === "SOL" ? currentBalance.toFixed(4) : currentBalance.toFixed(2)}
+            </button>
+          )}
+        </div>
         <input
           type="number"
           step={fromAsset === "SOL" ? "0.001" : "0.01"}
@@ -670,7 +841,7 @@ function SwapSection() {
 
       <div className="text-[10px] text-muted-foreground space-y-1">
         <p>Swap uses Pyth oracle price feed via Arcium MPC for private execution.</p>
-        <p>Swap program: <span className="font-mono">{VEILX_SWAP_PROGRAM.slice(0, 12)}…</span></p>
+        <p>Swap program: <span className="font-mono">{VEILX_SWAP_PROGRAM.slice(0, 16)}…</span></p>
       </div>
     </div>
   );
