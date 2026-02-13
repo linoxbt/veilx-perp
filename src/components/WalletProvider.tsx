@@ -6,8 +6,6 @@ import {
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
 import { SolflareWalletAdapter } from "@solana/wallet-adapter-solflare";
-import { TorusWalletAdapter } from "@solana/wallet-adapter-torus";
-import { CloverWalletAdapter } from "@solana/wallet-adapter-clover";
 import { clusterApiUrl } from "@solana/web3.js";
 
 import "@solana/wallet-adapter-react-ui/styles.css";
@@ -23,8 +21,6 @@ const WalletProvider: FC<Props> = ({ children }) => {
     () => [
       new PhantomWalletAdapter(),
       new SolflareWalletAdapter(),
-      new TorusWalletAdapter(),
-      new CloverWalletAdapter(),
     ],
     []
   );
