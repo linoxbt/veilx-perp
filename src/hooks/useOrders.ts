@@ -117,9 +117,9 @@ export const useOrders = () => {
         programId
       );
 
-      // Derive market PDA
+      // Derive market PDA using market name (matches on-chain seeds)
       const [marketPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("market"), publicKey.toBuffer()],
+        [Buffer.from("market"), Buffer.from(orderParams.market)],
         programId
       );
 

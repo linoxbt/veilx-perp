@@ -192,7 +192,7 @@ function PositionsTable({
                     )}
                   </div>
                 </td>
-                <td className={`py-2 font-semibold ${p.side === "long" ? "text-profit" : "text-loss"}`}>{p.side.toUpperCase()}</td>
+                <td className={`py-2 font-semibold ${p.side === "long" ? "text-profit" : "text-loss"}`}>{p.side === "long" ? "BUY" : "SELL"}</td>
                 <td className="py-2 text-right font-mono text-foreground">{p.size}</td>
                 <td className="py-2 text-right font-mono text-foreground">${p.entryPrice.toFixed(2)}</td>
                 <td className="py-2 text-right font-mono text-primary">{p.leverage}x</td>
@@ -239,7 +239,7 @@ function OpenOrdersTable({ orders, onCancel }: { orders: any[]; onCancel: (id: s
           {orders.map((o) => (
             <tr key={o.id} className="border-b border-border/50 hover:bg-muted/30">
               <td className="py-2 font-mono font-medium text-foreground">{o.market}</td>
-              <td className={`py-2 font-semibold ${o.side === "long" ? "text-profit" : "text-loss"}`}>{o.side.toUpperCase()}</td>
+              <td className={`py-2 font-semibold ${o.side === "long" ? "text-profit" : "text-loss"}`}>{o.side === "long" ? "BUY" : "SELL"}</td>
               <td className="py-2 text-muted-foreground uppercase">{o.type}</td>
               <td className="py-2 text-right font-mono text-foreground">{o.size}</td>
               <td className="py-2 text-right font-mono text-foreground">${o.price?.toFixed(2)}</td>
@@ -276,7 +276,7 @@ function TradeHistoryTable({ history }: { history: any[] }) {
           {history.map((o) => (
             <tr key={o.id} className="border-b border-border/50 hover:bg-muted/30">
               <td className="py-2 font-mono font-medium text-foreground">{o.market}</td>
-              <td className={`py-2 font-semibold ${o.side === "long" ? "text-profit" : "text-loss"}`}>{o.side.toUpperCase()}</td>
+              <td className={`py-2 font-semibold ${o.side === "long" ? "text-profit" : "text-loss"}`}>{o.side === "long" ? "BUY" : "SELL"}</td>
               <td className="py-2 text-right font-mono text-foreground">{o.size}</td>
               <td className="py-2 text-right font-mono text-foreground">${o.price?.toFixed(2) ?? "Market"}</td>
               <td className={`py-2 text-right font-mono font-semibold ${o.pnl >= 0 ? "text-profit" : "text-loss"}`}>
@@ -314,7 +314,7 @@ function OrderHistoryTable({ history }: { history: any[] }) {
             <tr key={o.id} className="border-b border-border/50 hover:bg-muted/30">
               <td className="py-2 font-mono text-muted-foreground">{new Date(o.timestamp).toLocaleTimeString()}</td>
               <td className="py-2 font-mono font-medium text-foreground">{o.market}</td>
-              <td className={`py-2 font-semibold ${o.side === "long" ? "text-profit" : "text-loss"}`}>{o.side.toUpperCase()}</td>
+              <td className={`py-2 font-semibold ${o.side === "long" ? "text-profit" : "text-loss"}`}>{o.side === "long" ? "BUY" : "SELL"}</td>
               <td className="py-2 text-muted-foreground uppercase">{o.type}</td>
               <td className="py-2 text-right font-mono text-foreground">{o.size}</td>
               <td className="py-2 text-right font-mono text-foreground">${o.price?.toFixed(2) ?? "Market"}</td>
