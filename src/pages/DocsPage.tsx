@@ -1,12 +1,13 @@
 import { useState, useCallback } from "react";
 import { Copy, Check } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Eye, ArrowLeft, FileCode, Shield, Layers, Rocket, Lock, Server, BookOpen } from "lucide-react";
+import { Eye, ArrowLeft, FileCode, Shield, Layers, Rocket, Lock, Server, BookOpen, Cpu } from "lucide-react";
 
 const TABS = [
   { id: "overview", label: "Overview", icon: BookOpen },
   { id: "architecture", label: "Architecture", icon: Layers },
   { id: "contracts", label: "Smart Contracts", icon: FileCode },
+  { id: "arcium", label: "Arcium Integration", icon: Cpu },
   { id: "testing", label: "Testing Guide", icon: Server },
   { id: "deployment", label: "Deployment Guide", icon: Rocket },
   { id: "security", label: "Security", icon: Shield },
@@ -65,6 +66,7 @@ const DocsPage = () => {
             {activeTab === "overview" && <OverviewTab />}
             {activeTab === "architecture" && <ArchitectureTab />}
             {activeTab === "contracts" && <ContractsTab />}
+            {activeTab === "arcium" && <ArciumIntegrationTab />}
             {activeTab === "testing" && <TestingTab />}
             {activeTab === "deployment" && <DeploymentTab />}
             {activeTab === "security" && <SecurityTab />}
@@ -1228,6 +1230,606 @@ export const USDC_DECIMALS = 6;`} />
         <li>• <strong className="text-foreground">Swap pool initialized</strong> — ready for SOL↔USDC swaps</li>
         <li>• <strong className="text-foreground">Updated config</strong> — <code className="text-primary bg-muted px-1 rounded">USDC_MINT</code> and <code className="text-primary bg-muted px-1 rounded">VEILX_SWAP_PROGRAM</code> in programs.ts</li>
       </ul>
+    </div>
+  </>
+);
+
+const ArciumIntegrationTab = () => (
+  <>
+    <DocSection title="Arcium Integration — Complete Guide">
+      <p>
+        This guide covers everything you need to integrate <strong className="text-foreground">Arcium's decentralized encrypted compute network</strong> into VeilX. Arcium is <strong className="text-foreground">not an L1 blockchain</strong> — it's an MPC (Multi-Party Computation) network that processes encrypted data alongside your Solana programs.
+      </p>
+      <p>
+        Think of it this way: <strong className="text-foreground">Solana = settlement layer</strong>. <strong className="text-foreground">Arcium = confidential compute layer</strong>. Your perp contract handles custody and state. Arcium handles the math on encrypted inputs.
+      </p>
+    </DocSection>
+
+    <DocSection title="What Arcium Is (and Isn't)">
+      <div className="rounded-xl border border-border bg-card overflow-hidden mb-4">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border bg-secondary/30">
+              <th className="text-left p-3 font-medium text-foreground">Arcium IS</th>
+              <th className="text-left p-3 font-medium text-foreground">Arcium IS NOT</th>
+            </tr>
+          </thead>
+          <tbody className="text-muted-foreground">
+            <tr className="border-b border-border/50">
+              <td className="p-3">A decentralized encrypted compute network</td>
+              <td className="p-3">A Layer-1 blockchain</td>
+            </tr>
+            <tr className="border-b border-border/50">
+              <td className="p-3">An MPC cluster that processes ciphertext</td>
+              <td className="p-3">A zero-knowledge proof system (zk rollup)</td>
+            </tr>
+            <tr className="border-b border-border/50">
+              <td className="p-3">A blindfolded calculator for sensitive math</td>
+              <td className="p-3">A smart contract platform</td>
+            </tr>
+            <tr>
+              <td className="p-3">Compatible with Solana as a companion layer</td>
+              <td className="p-3">A replacement for your on-chain program</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </DocSection>
+
+    <DocSection title="Step 1 — Define What Must Be Private">
+      <p>Do not encrypt everything. Only offload sensitive math to Arcium.</p>
+    </DocSection>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+      <div className="rounded-xl border border-profit/30 bg-profit/5 p-4 text-sm">
+        <p className="text-profit font-semibold mb-2">🔓 Stays Public (on-chain)</p>
+        <ul className="text-muted-foreground space-y-1 ml-4">
+          <li>• Funding rate</li>
+          <li>• Index price (Pyth oracle)</li>
+          <li>• Global open interest</li>
+          <li>• Insurance fund balance</li>
+          <li>• Settlement results</li>
+        </ul>
+      </div>
+      <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm">
+        <p className="text-primary font-semibold mb-2">🔒 Private (Arcium MPC)</p>
+        <ul className="text-muted-foreground space-y-1 ml-4">
+          <li>• Individual position size</li>
+          <li>• Leverage per trader</li>
+          <li>• Margin balance</li>
+          <li>• Liquidation threshold</li>
+          <li>• User PnL (until close)</li>
+          <li>• Risk score</li>
+        </ul>
+      </div>
+    </div>
+
+    <DocSection title="Step 2 — Hybrid Architecture Design">
+      <p>Your system splits into three layers that coordinate cryptographically:</p>
+    </DocSection>
+    <div className="rounded-xl border border-border bg-card p-6 mb-8 font-mono text-xs">
+      <pre className="text-muted-foreground whitespace-pre overflow-x-auto">{`
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        VeilX Hybrid Architecture                        │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│   ┌───────────────┐         ┌──────────────────┐     ┌──────────────┐  │
+│   │   CLIENT       │  enc    │   ARCIUM MXE     │ res │   SOLANA     │  │
+│   │                │ ──────▶ │                  │ ──▶ │   PROGRAM    │  │
+│   │ • Encrypt      │  order  │ • Risk engine    │ ult │              │  │
+│   │   inputs       │  data   │ • Margin checks  │     │ • Settlement │  │
+│   │ • Generate     │         │ • Liquidation    │     │ • Custody    │  │
+│   │   shares       │         │   evaluation     │     │ • State      │  │
+│   │ • Decrypt      │         │ • PnL math       │     │   updates    │  │
+│   │   own data     │         │                  │     │ • Verify     │  │
+│   │                │         │ (all on          │     │   MPC proof  │  │
+│   │                │         │  ciphertext)     │     │              │  │
+│   └───────────────┘         └──────────────────┘     └──────────────┘  │
+│                                                                         │
+│   Chain = State Anchor    Arcium = Blind Calculator    Client = Encryptor│
+└─────────────────────────────────────────────────────────────────────────┘
+`}</pre>
+    </div>
+
+    <DocSection title="Step 3 — Client-Side Encryption">
+      <p>When a trader opens a position, encryption happens <strong className="text-foreground">before</strong> the transaction is broadcast. The client never sends plaintext to the chain.</p>
+    </DocSection>
+    <CodeBlock
+      title="Client-side encryption flow (TypeScript)"
+      language="TypeScript"
+      code={`import { ArciumSDK } from "@arcium/sdk";
+
+// Initialize Arcium SDK with your cluster
+const arcium = new ArciumSDK({
+  clusterId: "<your-arcium-cluster-id>",
+  network: "devnet",
+});
+
+// Trader opens a position
+const orderParams = {
+  size: 1000,       // Position size in USDC
+  leverage: 20,     // 20x leverage
+  margin: 500,      // Collateral amount
+  side: "long",     // Direction
+  stopLoss: 145.50, // Stop loss price
+  takeProfit: 180,  // Take profit price
+};
+
+// Step 1: Encrypt locally — NO plaintext leaves the browser
+const encryptedPayload = await arcium.encrypt(orderParams);
+
+// Step 2: Generate secret shares for MPC nodes
+const shares = await arcium.generateShares(encryptedPayload, {
+  threshold: 3,  // 3-of-5 reconstruction threshold
+  nodeCount: 5,  // Total MPC nodes
+});
+
+// Step 3: Submit encrypted blob to Solana program
+const tx = await submitEncryptedOrder(shares, encryptedPayload.ciphertext);
+
+// The chain sees: encrypted bytes
+// The chain does NOT see: 1000 USDC, 20x leverage, long`}
+    />
+
+    <DocSection title="Step 4 — What You Actually Deploy">
+      <p>You deploy <strong className="text-foreground">three things</strong>, but only one is a traditional on-chain contract:</p>
+    </DocSection>
+    <div className="space-y-4 mb-8">
+      <div className="rounded-xl border border-border bg-card p-5">
+        <p className="text-sm font-semibold text-foreground mb-2">① Perp Smart Contracts (Solana)</p>
+        <p className="text-sm text-muted-foreground">Deploy normally via Solana Playground or Anchor CLI. Handles custody, position bookkeeping, settlement, token transfers, and MPC proof verification.</p>
+      </div>
+      <div className="rounded-xl border border-primary/30 bg-primary/5 p-5">
+        <p className="text-sm font-semibold text-primary mb-2">② Arcium MXE — Multiparty Execution Environment</p>
+        <p className="text-sm text-muted-foreground">This is <strong className="text-foreground">NOT</strong> a blockchain contract. It's a confidential execution module deployed to the Arcium network. Contains your margin formulas, liquidation logic, PnL math — all operating on encrypted data types.</p>
+      </div>
+      <div className="rounded-xl border border-border bg-card p-5">
+        <p className="text-sm font-semibold text-foreground mb-2">③ Integration Layer (SDK + Orchestration)</p>
+        <p className="text-sm text-muted-foreground">Your frontend/backend encrypts inputs, submits payloads to Arcium, receives verified outputs, and relays results to the on-chain program.</p>
+      </div>
+    </div>
+
+    <DocSection title="Step 5 — Deploy Your MXE to Arcium">
+      <p>You'll use the Arcium CLI (terminal) to deploy your confidential execution module. This is deploying an encrypted logic container to a distributed MPC network.</p>
+    </DocSection>
+    <CodeBlock
+      title="Terminal — Deploy MXE"
+      language="bash"
+      code={`# ═══════════════════════════════════════════════════════
+# Prerequisites
+# ═══════════════════════════════════════════════════════
+
+# 1. Install Arcium CLI
+npm install -g @arcium/cli
+
+# 2. Verify installation
+arcium --version
+
+# 3. Initialize project for devnet
+arcium init --network devnet
+
+# ═══════════════════════════════════════════════════════
+# Create the MXE (Multiparty Execution Environment)
+# ═══════════════════════════════════════════════════════
+
+# 4. Create a new MXE project
+arcium mxe create --name veilx-risk-engine
+
+# 5. Your MXE directory structure:
+#    veilx-risk-engine/
+#    ├── src/
+#    │   ├── margin.rs        ← Margin health computation
+#    │   ├── liquidation.rs   ← Liquidation condition checks
+#    │   ├── pnl.rs           ← PnL calculation
+#    │   └── lib.rs           ← Entry point
+#    ├── Arcium.toml           ← MXE configuration
+#    └── tests/
+
+# 6. Build the MXE
+arcium mxe build
+
+# 7. Deploy to Arcium network
+arcium mxe deploy --network devnet
+#    Output: MXE deployed. ID: mxe_abc123...
+#    ⚠️ SAVE THIS MXE ID
+
+# 8. Verify deployment
+arcium mxe status --id mxe_abc123`}
+    />
+
+    <DocSection title="Step 6 — Write the Encrypted Risk Engine (MXE Logic)">
+      <p>Inside your MXE, you write risk engine logic using Arcium's encrypted data types. All arithmetic operates on ciphertext — no node ever sees real numbers.</p>
+    </DocSection>
+    <CodeBlock
+      title="veilx-risk-engine/src/margin.rs (MXE logic)"
+      language="Rust (Arcium)"
+      code={`use arcium_mxe::prelude::*;
+
+/// Margin health computation on encrypted data
+/// No MPC node sees the actual values
+#[mxe_function]
+pub fn compute_margin_health(
+    collateral: EncryptedU64,
+    position_size: EncryptedU64,
+    entry_price: EncryptedU64,
+    current_price: EncryptedU64,
+    leverage: EncryptedU16,
+    side: EncryptedU8,
+) -> MxeResult<MarginHealthResult> {
+    let price_diff = if side == EncryptedU8::from(0) {
+        current_price - entry_price
+    } else {
+        entry_price - current_price
+    };
+
+    let unrealized_pnl = price_diff * position_size;
+    let maintenance_margin = position_size * current_price / leverage;
+    let margin_health = (collateral + unrealized_pnl) / maintenance_margin;
+
+    Ok(MarginHealthResult {
+        encrypted_health: margin_health,
+        is_liquidatable: margin_health < EncryptedU64::from(100),
+    })
+}
+
+/// Liquidation check — returns ONLY a boolean to the chain
+#[mxe_function]
+pub fn check_liquidation(
+    encrypted_position: EncryptedPosition,
+    current_price: EncryptedU64,
+    maintenance_margin_bps: u16,
+) -> MxeResult<LiquidationResult> {
+    let health = compute_margin_health(
+        encrypted_position.collateral,
+        encrypted_position.size,
+        encrypted_position.entry_price,
+        current_price,
+        encrypted_position.leverage,
+        encrypted_position.side,
+    )?;
+
+    // ONLY this boolean is revealed to the chain
+    Ok(LiquidationResult {
+        should_liquidate: health.is_liquidatable,
+        proof: generate_mpc_proof(&health),
+    })
+}
+
+/// PnL calculation — encrypted until position close
+#[mxe_function]
+pub fn compute_pnl(
+    entry_price: EncryptedU64,
+    exit_price: EncryptedU64,
+    size: EncryptedU64,
+    leverage: EncryptedU16,
+    side: EncryptedU8,
+) -> MxeResult<PnlResult> {
+    let raw_pnl = if side == EncryptedU8::from(0) {
+        (exit_price - entry_price) * size * leverage
+    } else {
+        (entry_price - exit_price) * size * leverage
+    };
+
+    Ok(PnlResult {
+        encrypted_pnl: raw_pnl,
+        pnl_proof: generate_pnl_proof(&raw_pnl),
+    })
+}`}
+    />
+
+    <DocSection title="Step 7 — Register MPC Nodes & Configure Cluster">
+      <p>For devnet, Arcium provides shared nodes. For production, you'd run your own or use vetted operators.</p>
+    </DocSection>
+    <CodeBlock
+      title="Terminal — Node registration"
+      language="bash"
+      code={`# ═══════════════════════════════════════════════════════
+# Option A: Use Arcium's shared devnet nodes (easiest)
+# ═══════════════════════════════════════════════════════
+
+arcium devnet setup
+#    Auto-configures a 3-of-5 MPC cluster
+#    Output: Cluster ID: cluster_xyz789
+#    ⚠️ SAVE THIS CLUSTER ID
+
+# ═══════════════════════════════════════════════════════
+# Option B: Manual node registration (production-style)
+# ═══════════════════════════════════════════════════════
+
+arcium node register \\
+  --pubkey <NODE_1_SOLANA_PUBKEY> \\
+  --encryption-key <NODE_1_X25519_KEY> \\
+  --endpoint https://node1.example.com:8443
+
+arcium node register \\
+  --pubkey <NODE_2_SOLANA_PUBKEY> \\
+  --encryption-key <NODE_2_X25519_KEY> \\
+  --endpoint https://node2.example.com:8443
+
+arcium node register \\
+  --pubkey <NODE_3_SOLANA_PUBKEY> \\
+  --encryption-key <NODE_3_X25519_KEY> \\
+  --endpoint https://node3.example.com:8443
+
+# Create the cluster with threshold
+arcium cluster create \\
+  --threshold 3 \\
+  --nodes <NODE_1>,<NODE_2>,<NODE_3> \\
+  --mxe mxe_abc123
+
+# Verify cluster status
+arcium cluster status`}
+    />
+
+    <DocSection title="Step 8 — Wire Arcium to Your Solana Program">
+      <p>Your on-chain program must verify Arcium's compute results before updating state.</p>
+    </DocSection>
+    <CodeBlock
+      title="Full integration round trip (TypeScript)"
+      language="TypeScript"
+      code={`import { ArciumSDK } from "@arcium/sdk";
+import { Connection, PublicKey, Transaction } from "@solana/web3.js";
+
+const arcium = new ArciumSDK({
+  clusterId: "cluster_xyz789",
+  network: "devnet",
+  mxeId: "mxe_abc123",
+});
+
+async function openPrivatePosition(wallet, orderParams) {
+  // ── STEP 1: Encrypt on client ──
+  const encrypted = await arcium.encrypt({
+    size: orderParams.size,
+    leverage: orderParams.leverage,
+    margin: orderParams.margin,
+    side: orderParams.side,
+    entryPrice: orderParams.price,
+  });
+
+  // ── STEP 2: Submit to Arcium MXE for risk check ──
+  const riskResult = await arcium.compute("compute_margin_health", {
+    collateral: encrypted.margin,
+    position_size: encrypted.size,
+    entry_price: encrypted.entryPrice,
+    current_price: await getOraclePrice(),
+    leverage: encrypted.leverage,
+    side: encrypted.side,
+  });
+
+  if (riskResult.is_liquidatable) {
+    throw new Error("Position would be immediately liquidatable");
+  }
+
+  // ── STEP 3: Submit encrypted order to Solana ──
+  const tx = new Transaction().add(
+    submitEncryptedOrderInstruction({
+      ciphertext: encrypted.ciphertext,
+      proof: riskResult.proof,
+      market: getMarketPda(orderParams.market),
+      user: wallet.publicKey,
+    })
+  );
+
+  // ── STEP 4: Solana verifies proof → updates state ──
+  const sig = await wallet.sendTransaction(tx, connection);
+  await connection.confirmTransaction(sig, "confirmed");
+}
+
+// ── LIQUIDATION CHECK (runs periodically) ──
+async function checkLiquidations(positions) {
+  for (const positionPda of positions) {
+    const result = await arcium.compute("check_liquidation", {
+      position: positionPda,
+      current_price: await getOraclePrice(),
+      maintenance_margin_bps: 500,
+    });
+
+    // Chain sees: "liquidate = true/false"
+    // Chain does NOT see: margin health, leverage, or entry
+    if (result.should_liquidate) {
+      await executeLiquidation(positionPda, result.proof);
+    }
+  }
+}`}
+    />
+
+    <DocSection title="Step 9 — Handle Results & User Decryption">
+      <p>Arcium returns either an encrypted result (only the user can decrypt) or a verified boolean. Your smart contract verifies the proof before acting.</p>
+    </DocSection>
+    <div className="rounded-xl border border-border bg-card p-6 mb-8 font-mono text-xs">
+      <p className="text-primary mb-4 text-sm font-semibold font-sans">Result Flow</p>
+      <pre className="text-muted-foreground whitespace-pre overflow-x-auto">{`
+Arcium MXE computes on encrypted inputs
+         │
+         ├── Returns encrypted result (user-only)
+         │   └── User wallet decrypts locally:
+         │       • Personal PnL
+         │       • Margin health percentage
+         │       • Distance to liquidation
+         │       → Other traders CANNOT see this
+         │
+         └── Returns verified boolean (public)
+             └── Smart contract receives:
+                 • liquidation = true/false
+                 • MPC proof (verified on-chain)
+                 → Contract executes liquidation
+                 → Contract NEVER learns the threshold
+`}</pre>
+    </div>
+    <CodeBlock
+      title="User-side decryption"
+      language="TypeScript"
+      code={`// Only the position owner can decrypt their private data
+async function getMyPositionDetails(positionPda) {
+  const encryptedPosition = await program.account.position.fetch(positionPda);
+
+  const decrypted = await arcium.decrypt(
+    encryptedPosition.encrypted_data,
+    wallet
+  );
+
+  // User sees their own data:
+  console.log("My size:", decrypted.size);         // 1000 USDC
+  console.log("My leverage:", decrypted.leverage); // 20x
+  console.log("My entry:", decrypted.entryPrice);  // $152.30
+  console.log("My PnL:", decrypted.pnl);           // +$340.50
+
+  // Other traders see: [0x8a, 0xf3, 0x2b, 0x91, ...] ← meaningless
+}`}
+    />
+
+    <DocSection title="Step 10 — Performance & Safety Design">
+      <p>This is where most privacy-perp projects die. MPC is heavier than raw on-chain math.</p>
+    </DocSection>
+    <div className="rounded-xl border border-loss/30 bg-loss/5 p-4 mb-6 text-sm">
+      <p className="text-loss font-semibold mb-2">⚠️ Critical Performance Requirements</p>
+      <ul className="text-muted-foreground space-y-2 ml-4">
+        <li>• <strong className="text-foreground">Liquidation latency:</strong> Benchmark target: &lt;500ms for liquidation checks.</li>
+        <li>• <strong className="text-foreground">Throughput:</strong> Stress test with 100+ concurrent positions.</li>
+        <li>• <strong className="text-foreground">Worst-case:</strong> Design for degraded performance when nodes are slow.</li>
+      </ul>
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+      <div className="rounded-xl border border-border bg-card p-4 text-sm">
+        <p className="font-semibold text-foreground mb-2">🔧 Performance Optimizations</p>
+        <ul className="text-muted-foreground space-y-1 ml-4">
+          <li>• Batch margin checks together</li>
+          <li>• Maintain encrypted state across checks</li>
+          <li>• Run periodic risk batches, not per-block</li>
+          <li>• Only send liquidation signals on-chain</li>
+          <li>• Use off-chain price feeds for intermediate checks</li>
+        </ul>
+      </div>
+      <div className="rounded-xl border border-border bg-card p-4 text-sm">
+        <p className="font-semibold text-foreground mb-2">🛡️ Fallback Safety (Circuit Breakers)</p>
+        <ul className="text-muted-foreground space-y-1 ml-4">
+          <li>• <strong className="text-foreground">Arcium unavailable:</strong> Pause new positions</li>
+          <li>• <strong className="text-foreground">Liquidation fallback:</strong> Transparent on-chain logic</li>
+          <li>• <strong className="text-foreground">Safe mode:</strong> Reduce max leverage to 5x</li>
+          <li>• <strong className="text-foreground">Never</strong> let the protocol hang in limbo</li>
+        </ul>
+      </div>
+    </div>
+
+    <DocSection title="Privacy Model Audit Checklist">
+      <p>Privacy systems fail at the edges, not the math.</p>
+    </DocSection>
+    <div className="rounded-xl border border-border bg-card overflow-hidden mb-8">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border bg-secondary/30">
+            <th className="text-left p-3 font-medium text-foreground">Attack Vector</th>
+            <th className="text-left p-3 font-medium text-foreground">Question</th>
+            <th className="text-left p-3 font-medium text-foreground">Mitigation</th>
+          </tr>
+        </thead>
+        <tbody className="text-muted-foreground">
+          <tr className="border-b border-border/50">
+            <td className="p-3">Metadata leakage</td>
+            <td className="p-3">Can someone infer positions from on-chain metadata?</td>
+            <td className="p-3 text-foreground">Uniform encrypted payload sizes</td>
+          </tr>
+          <tr className="border-b border-border/50">
+            <td className="p-3">Size leakage</td>
+            <td className="p-3">Are encrypted payload sizes revealing info?</td>
+            <td className="p-3 text-foreground">Pad all payloads to fixed length</td>
+          </tr>
+          <tr className="border-b border-border/50">
+            <td className="p-3">Timing attacks</td>
+            <td className="p-3">Can tx timing reveal user behavior?</td>
+            <td className="p-3 text-foreground">Random delays, batch submissions</td>
+          </tr>
+          <tr className="border-b border-border/50">
+            <td className="p-3">Liquidation frequency</td>
+            <td className="p-3">Does liq frequency expose leverage patterns?</td>
+            <td className="p-3 text-foreground">Aggregate liquidation events</td>
+          </tr>
+          <tr>
+            <td className="p-3">Node collusion</td>
+            <td className="p-3">What if 3+ nodes collude?</td>
+            <td className="p-3 text-foreground">Geographic distribution, reputation staking</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <DocSection title="Complete Deployment Checklist">
+      <p>End-to-end checklist for integrating Arcium into VeilX:</p>
+    </DocSection>
+    <CodeBlock
+      title="Full deployment commands"
+      language="bash"
+      code={`# ═══════════════════════════════════════════════════════
+# COMPLETE ARCIUM INTEGRATION CHECKLIST
+# ═══════════════════════════════════════════════════════
+
+# ── 1. Install CLI tools ──
+npm install -g @arcium/cli
+solana --version
+anchor --version          # Optional
+
+# ── 2. Deploy Solana programs ──
+# (Use Solana Playground — see Deployment Guide tab)
+# Need: VEILX_CORE, VEILX_MPC_BRIDGE, VEILX_LIQUIDATION IDs
+
+# ── 3. Initialize Arcium project ──
+arcium init --network devnet
+
+# ── 4. Create MXE ──
+arcium mxe create --name veilx-risk-engine
+
+# ── 5. Build & deploy MXE ──
+arcium mxe build
+arcium mxe deploy --network devnet
+# Save: MXE_ID
+
+# ── 6. Set up MPC cluster ──
+arcium devnet setup          # Auto-configures for devnet
+# Save: CLUSTER_ID
+
+# ── 7. Link MXE to cluster ──
+arcium cluster link-mxe \\
+  --cluster <CLUSTER_ID> \\
+  --mxe <MXE_ID>
+
+# ── 8. Link to Solana bridge program ──
+arcium link-program \\
+  --program-id <VEILX_MPC_BRIDGE_PROGRAM_ID> \\
+  --cluster <CLUSTER_ID>
+
+# ── 9. Update frontend config ──
+# src/config/programs.ts:
+#   ARCIUM_CONFIG.CLUSTER_ID = "<CLUSTER_ID>"
+
+# ── 10. Verify everything ──
+arcium mxe status --id <MXE_ID>
+arcium cluster status
+solana account <VEILX_CORE_PROGRAM_ID> --url devnet`}
+    />
+
+    <div className="rounded-xl border border-profit/30 bg-profit/5 p-4 mb-8 text-sm">
+      <p className="text-profit font-semibold mb-2">✅ After completing all steps you should have:</p>
+      <ul className="text-muted-foreground space-y-1 ml-4">
+        <li>• <strong className="text-foreground">3 Solana programs</strong> — veilx-core, veilx-mpc-bridge, veilx-liquidation</li>
+        <li>• <strong className="text-foreground">1 Arcium MXE</strong> — veilx-risk-engine (deployed to Arcium network)</li>
+        <li>• <strong className="text-foreground">1 MPC cluster</strong> — 3-of-5 threshold (active)</li>
+        <li>• <strong className="text-foreground">Linked bridge</strong> — Solana bridge ↔ Arcium cluster</li>
+        <li>• <strong className="text-foreground">Updated frontend config</strong> — all IDs wired</li>
+      </ul>
+    </div>
+
+    <div className="rounded-xl border border-primary/30 bg-primary/5 p-5 text-sm">
+      <p className="text-primary font-semibold mb-2">🏗️ The Big Picture</p>
+      <p className="text-muted-foreground mb-3">
+        Your DEX is now a <strong className="text-foreground">cryptographically coordinated system</strong> across two domains:
+      </p>
+      <ul className="text-muted-foreground space-y-1 ml-4 mb-3">
+        <li>• <strong className="text-foreground">Chain</strong> → Settlement + funds custody (the referee)</li>
+        <li>• <strong className="text-foreground">Arcium</strong> → Encrypted risk brain (the blindfolded calculator)</li>
+        <li>• <strong className="text-foreground">Client</strong> → Encryption + selective decryption</li>
+      </ul>
+      <p className="text-muted-foreground">
+        When traders can't see each other's liquidation levels, the entire game theory of perps shifts. That's not a UI change — that's <strong className="text-foreground">market structure evolution</strong>.
+      </p>
     </div>
   </>
 );
