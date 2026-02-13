@@ -1,11 +1,12 @@
 import { useState, useCallback } from "react";
 import { Copy, Check } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Eye, ArrowLeft, FileCode, Shield, Layers, Rocket, Lock, Server, BookOpen, Cpu } from "lucide-react";
+import { Eye, ArrowLeft, FileCode, Shield, Layers, Rocket, Lock, Server, BookOpen, Cpu, LayoutDashboard, Activity, AlertTriangle, Zap, Wallet, TrendingUp, DollarSign, Repeat } from "lucide-react";
 import veilxLogo from "@/assets/veilx-logo.png";
 
 const TABS = [
   { id: "overview", label: "Overview", icon: BookOpen },
+  { id: "features", label: "Features", icon: LayoutDashboard },
   { id: "architecture", label: "Architecture", icon: Layers },
   { id: "contracts", label: "Smart Contracts", icon: FileCode },
   { id: "arcium", label: "Arcium Integration", icon: Cpu },
@@ -65,6 +66,7 @@ const DocsPage = () => {
           {/* Content */}
           <main className="flex-1 min-w-0">
             {activeTab === "overview" && <OverviewTab />}
+            {activeTab === "features" && <FeaturesTab />}
             {activeTab === "architecture" && <ArchitectureTab />}
             {activeTab === "contracts" && <ContractsTab />}
             {activeTab === "arcium" && <ArciumIntegrationTab />}
@@ -140,6 +142,22 @@ const OverviewTab = () => (
       </ul>
     </DocSection>
 
+    <DocSection title="Protocol Statistics">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 not-prose">
+        {[
+          { label: "Supported Markets", value: "4" },
+          { label: "Max Leverage", value: "50x" },
+          { label: "Taker Fee", value: "0.05%" },
+          { label: "Maker Fee", value: "0.02%" },
+        ].map((s) => (
+          <div key={s.label} className="rounded-lg border border-border bg-card p-3 text-center">
+            <p className="text-lg font-bold font-mono text-foreground">{s.value}</p>
+            <p className="text-[10px] text-muted-foreground">{s.label}</p>
+          </div>
+        ))}
+      </div>
+    </DocSection>
+
     <DocSection title="Technology Stack">
       <ul className="space-y-1">
         <li>• <strong className="text-foreground">Blockchain:</strong> Solana (SVM)</li>
@@ -147,7 +165,153 @@ const OverviewTab = () => (
         <li>• <strong className="text-foreground">Smart Contracts:</strong> Anchor Framework (Rust)</li>
         <li>• <strong className="text-foreground">Oracle:</strong> Pyth Network price feeds</li>
         <li>• <strong className="text-foreground">Frontend:</strong> React + TypeScript + Vite</li>
+        <li>• <strong className="text-foreground">Token:</strong> VeilX Test USDC (mint: <code className="text-primary bg-muted px-1 rounded text-[10px]">3nCh8MyXJtH55BbLFyL1aZYjwjDpbU3rBmFaPLWq85gK</code>)</li>
       </ul>
+    </DocSection>
+
+    <DocSection title="Protocol Status">
+      <div className="rounded-xl border border-border bg-card overflow-hidden not-prose">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-border bg-secondary/30">
+              <th className="text-left p-3 font-medium text-foreground">Component</th>
+              <th className="text-left p-3 font-medium text-foreground">Status</th>
+              <th className="text-left p-3 font-medium text-foreground">Details</th>
+            </tr>
+          </thead>
+          <tbody className="text-muted-foreground">
+            {[
+              { name: "VeilX Core (Solana)", status: "Deployed", color: "text-profit", detail: "DLkXTK...Bixnb" },
+              { name: "VeilX MPC Bridge (Solana)", status: "Deployed", color: "text-profit", detail: "DooxjY...VLYks" },
+              { name: "VeilX Liquidation (Solana)", status: "Deployed", color: "text-profit", detail: "Fq4Lqo...18eW" },
+              { name: "VeilX Swap (Solana)", status: "Deployed", color: "text-profit", detail: "92Qp1B...VBPh" },
+              { name: "VeilX Test USDC Mint", status: "Created", color: "text-profit", detail: "3nCh8M...85gK" },
+              { name: "Arcium MXE Risk Engine", status: "Pending", color: "text-[hsl(var(--warning))]", detail: "Requires Arcium SDK release" },
+              { name: "Arcium Cluster Setup", status: "Pending", color: "text-[hsl(var(--warning))]", detail: "Requires Arcium CLI" },
+              { name: "Market Initialization (4 pairs)", status: "Manual Step", color: "text-accent", detail: "Via Solana Playground" },
+              { name: "Swap Pool Initialization", status: "Manual Step", color: "text-accent", detail: "Via Solana Playground" },
+              { name: "Frontend Config", status: "Complete", color: "text-profit", detail: "All IDs wired" },
+            ].map((row) => (
+              <tr key={row.name} className="border-b border-border/50">
+                <td className="p-3 font-medium text-foreground">{row.name}</td>
+                <td className={`p-3 font-semibold ${row.color}`}>{row.status}</td>
+                <td className="p-3 font-mono text-[10px]">{row.detail}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </DocSection>
+
+    <DocSection title="Glossary">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 not-prose">
+        {[
+          { term: "PDA", def: "Program Derived Address — deterministic account address derived from seeds" },
+          { term: "MPC", def: "Multi-Party Computation — encrypted joint computation across distributed nodes" },
+          { term: "MXE", def: "Multiparty Execution Environment — Arcium's confidential compute container" },
+          { term: "Perp", def: "Perpetual futures contract — no expiry, tracks spot via funding rates" },
+          { term: "Funding Rate", def: "Periodic payment between longs/shorts to anchor perp price to spot" },
+          { term: "Margin", def: "Collateral deposited to back leveraged positions" },
+          { term: "Liquidation", def: "Forced position closure when margin falls below maintenance threshold" },
+          { term: "ATA", def: "Associated Token Account — default SPL token account for a wallet" },
+        ].map((g) => (
+          <div key={g.term} className="rounded-lg border border-border bg-muted/30 p-2.5">
+            <span className="text-xs font-semibold text-primary">{g.term}</span>
+            <p className="text-[10px] text-muted-foreground mt-0.5">{g.def}</p>
+          </div>
+        ))}
+      </div>
+    </DocSection>
+
+    <DocSection title="Documentation Sections">
+      <ul className="space-y-1">
+        <li>• <strong className="text-foreground">Features</strong> — Detailed explanation of every user-facing feature</li>
+        <li>• <strong className="text-foreground">Architecture</strong> — System design, data flow, and privacy model</li>
+        <li>• <strong className="text-foreground">Smart Contracts</strong> — Full Anchor source code for all 4 programs</li>
+        <li>• <strong className="text-foreground">Arcium Integration</strong> — 10-step guide to integrate MPC privacy</li>
+        <li>• <strong className="text-foreground">Testing Guide</strong> — Step-by-step Solana Playground testing</li>
+        <li>• <strong className="text-foreground">Deployment Guide</strong> — Deploy all programs to devnet</li>
+        <li>• <strong className="text-foreground">Security</strong> — Privacy guarantees, attack vectors, audit checklist</li>
+      </ul>
+    </DocSection>
+  </>
+);
+
+const FeaturesTab = () => (
+  <>
+    <DocSection title="Trading Terminal">
+      <p>The trading terminal at <code className="text-primary bg-muted px-1 rounded">/trade</code> provides a professional-grade interface for perpetual futures trading with full Arcium MPC privacy.</p>
+      <p><strong className="text-foreground">Order Types:</strong></p>
+      <ul className="space-y-1">
+        <li>• <strong className="text-foreground">Market Orders</strong> — Execute immediately at the best available price. Encrypted before submission to prevent front-running.</li>
+        <li>• <strong className="text-foreground">Limit Orders</strong> — Set a specific price. The limit price is encrypted — other traders cannot see your target entry.</li>
+      </ul>
+      <p><strong className="text-foreground">Leverage:</strong> Adjustable from 1x to 50x via a slider. The leverage value is encrypted in the order payload — no one can determine your risk exposure.</p>
+      <p><strong className="text-foreground">Take Profit / Stop Loss:</strong> Optional TP/SL parameters attached to orders. These are also encrypted — liquidation hunters cannot see your exit levels.</p>
+      <p><strong className="text-foreground">Execution Metrics:</strong> Before submitting, you see estimated Order Value, Slippage, and Fees. These are computed locally and never broadcast.</p>
+      <p><strong className="text-foreground">Supported Markets:</strong> SOL/USD, ETH/USD, BTC/USD, ARB/USD — each with Pyth Network oracle feeds for mark prices.</p>
+    </DocSection>
+
+    <DocSection title="Portfolio Dashboard">
+      <p>The portfolio at <code className="text-primary bg-muted px-1 rounded">/portfolio</code> is your private trading hub. All data shown is decrypted locally using your wallet key.</p>
+      <p><strong className="text-foreground">Overview:</strong> Account value, total equity, margin balance, available margin, unrealized/realized PnL, max drawdown, and open position count.</p>
+      <p><strong className="text-foreground">Margin Account:</strong> Displays total collateral, used margin, free margin, margin ratio, and maintenance margin. Cross-margin mode means all collateral backs all positions. Margin health is computed via Arcium MPC — your liquidation level is never exposed on-chain.</p>
+      <p><strong className="text-foreground">Deposit:</strong> Deposit SOL or USDC into your margin account. Amounts are encrypted via Arcium MPC before being stored on-chain.</p>
+      <p><strong className="text-foreground">Withdraw:</strong> Withdraw available (unreserved) margin back to your wallet. Requires sufficient free margin.</p>
+      <p><strong className="text-foreground">Swap:</strong> Convert SOL ↔ USDC on-chain via the VeilX Swap program (<code className="text-primary bg-muted px-1 rounded text-[10px]">92Qp1BiRNjVnqL9cYBNXYv4zQCdDzSycJn2Fia9qVBPh</code>). Uses a constant-product AMM with Arcium MPC for private execution.</p>
+    </DocSection>
+
+    <DocSection title="Orderbook">
+      <p>The orderbook displays live market depth for the selected trading pair. It shows bid and ask levels with size indicators.</p>
+      <p><strong className="text-foreground">Encrypted Depth:</strong> Individual order sizes within the book are aggregated from encrypted orders. While the aggregate depth at each price level is visible (needed for market function), the individual orders that compose it are MPC-redacted — you cannot decompose aggregate depth into individual trader sizes.</p>
+      <p><strong className="text-foreground">Spread Display:</strong> The current spread between best bid and best ask is shown in real-time, along with the last traded price.</p>
+    </DocSection>
+
+    <DocSection title="Funding Rates">
+      <p>Perpetual contracts use funding rates to keep the perp price aligned with the spot index price. VeilX settles funding every <strong className="text-foreground">1 hour</strong>.</p>
+      <p><strong className="text-foreground">Positive Rate:</strong> When the perp price {">"} spot price, longs pay shorts. This incentivizes selling to push the perp price down.</p>
+      <p><strong className="text-foreground">Negative Rate:</strong> When the perp price {"<"} spot price, shorts pay longs. This incentivizes buying to push the perp price up.</p>
+      <p><strong className="text-foreground">Privacy Model:</strong> The aggregate funding rate is public (it must be for the market to function). However, individual trader exposure and funding payments are computed privately inside Arcium MPC. No one can see your position size when calculating your funding payment.</p>
+      <p><strong className="text-foreground">Formula:</strong> <code className="text-primary bg-muted px-1 rounded text-[10px]">rate = clamp((mark - spot) / spot, -0.05%, +0.05%)</code> per hour.</p>
+    </DocSection>
+
+    <DocSection title="Liquidation Engine">
+      <p>The liquidation engine monitors all open positions and triggers liquidation when margin health falls below the maintenance threshold (5% / 500 bps).</p>
+      <p><strong className="text-foreground">Private Liquidation Checks:</strong> Margin health is computed inside the Arcium MPC network. The MPC returns only a boolean (<code className="text-primary bg-muted px-1 rounded">should_liquidate: true/false</code>) — the actual margin ratio, leverage, and entry price are never revealed.</p>
+      <p><strong className="text-foreground">Liquidation Fee:</strong> 2.5% (250 bps) of the deficit is charged. 50% goes to the insurance fund, 50% goes to the liquidator.</p>
+      <p><strong className="text-foreground">Insurance Fund:</strong> Protects the protocol against undercollateralized liquidations (when the deficit exceeds the trader's remaining margin).</p>
+      <p><strong className="text-foreground">Dashboard:</strong> The Liquidation section in the Portfolio page shows simulated encrypted health indicators, a queue of positions approaching threshold, and a log of recent liquidation events with MPC-verified status.</p>
+    </DocSection>
+
+    <DocSection title="Order Matching">
+      <p>VeilX matches orders through the Arcium MPC network, ensuring that no party learns the details of any order until after settlement.</p>
+      <p><strong className="text-foreground">Flow:</strong></p>
+      <ul className="space-y-1">
+        <li>1. <strong className="text-foreground">Encrypt:</strong> Order parameters are encrypted client-side before submission.</li>
+        <li>2. <strong className="text-foreground">Secret Share:</strong> Encrypted order is split across 3-of-5 MPC nodes. No single node can reconstruct the plaintext.</li>
+        <li>3. <strong className="text-foreground">MPC Match:</strong> Nodes collaboratively match compatible orders on ciphertext. The matching engine never sees plaintext.</li>
+        <li>4. <strong className="text-foreground">Settle:</strong> A verified match result is returned to the Solana program. The program verifies the MPC proof and updates position state.</li>
+      </ul>
+      <p><strong className="text-foreground">Dashboard:</strong> The Order Matching section in the Portfolio page shows a live animated visualization of this flow, plus a real-time feed of encrypted match events.</p>
+    </DocSection>
+
+    <DocSection title="Test USDC Faucet">
+      <p>VeilX uses a custom test USDC mint on devnet: <code className="text-primary bg-muted px-1 rounded text-[10px]">3nCh8MyXJtH55BbLFyL1aZYjwjDpbU3rBmFaPLWq85gK</code> (6 decimals, same as real USDC).</p>
+      <p><strong className="text-foreground">How it works:</strong> The faucet button on the Deposit page calls <code className="text-primary bg-muted px-1 rounded">createMintToInstruction</code> to mint 10,000 test USDC to your wallet.</p>
+      <p><strong className="text-foreground">Important:</strong> The faucet only works when the <strong className="text-foreground">mint authority wallet</strong> is connected. The mint authority is the CLI keypair that created the token (<code className="text-primary bg-muted px-1 rounded text-[10px]">HTGu5FqeD3m2GwfTJA58jj9A5vGfeBVpfPVSb8bZXrNd</code>). If you're using a different Phantom wallet, you must mint tokens via the CLI instead:</p>
+    </DocSection>
+    <CodeBlock title="Mint USDC via CLI (for non-authority wallets)" language="bash" code={`# Mint 10,000 USDC to any wallet address
+spl-token mint 3nCh8MyXJtH55BbLFyL1aZYjwjDpbU3rBmFaPLWq85gK 10000 -- <YOUR_PHANTOM_WALLET_ADDRESS>
+
+# Or airdrop devnet SOL to any wallet
+solana airdrop 2 <YOUR_PHANTOM_WALLET_ADDRESS> --url devnet`} />
+
+    <DocSection title="Wallet Integration">
+      <p>VeilX supports <strong className="text-foreground">Phantom</strong> and <strong className="text-foreground">Solflare</strong> wallets via the Solana Wallet Adapter.</p>
+      <p><strong className="text-foreground">Connection:</strong> Click "Select Wallet" in the header to connect. The app auto-detects available wallet extensions.</p>
+      <p><strong className="text-foreground">Network:</strong> VeilX runs on <strong className="text-foreground">Solana Devnet</strong>. Ensure your wallet is set to devnet (in Phantom: Settings → Developer Settings → Change Network → Devnet).</p>
+      <p><strong className="text-foreground">Balance Display:</strong> Once connected, your SOL and USDC balances appear in the Portfolio with a 15-second auto-refresh.</p>
+      <p><strong className="text-foreground">Transaction Signing:</strong> All on-chain operations (deposits, withdrawals, swaps, orders) require wallet approval. The transaction details are shown in the wallet popup before signing.</p>
     </DocSection>
   </>
 );
@@ -178,6 +342,65 @@ const ArchitectureTab = () => (
 `}</pre>
     </div>
 
+    <DocSection title="Layer Details">
+      <p><strong className="text-foreground">Client Layer:</strong></p>
+      <ul className="space-y-1">
+        <li>• Wallet connection (Phantom / Solflare via Solana Wallet Adapter)</li>
+        <li>• Client-side encryption of order parameters using Arcium SDK</li>
+        <li>• Local decryption of user's own position data</li>
+        <li>• Price display via CoinGecko API (mark prices via Pyth on-chain)</li>
+      </ul>
+      <p><strong className="text-foreground">Arcium Layer (Confidential Compute):</strong></p>
+      <ul className="space-y-1">
+        <li>• Risk engine: margin health, liquidation checks, PnL math</li>
+        <li>• Order matching on encrypted data</li>
+        <li>• Funding rate computation (aggregate only revealed)</li>
+        <li>• No data storage — compute-only, stateless per session</li>
+      </ul>
+      <p><strong className="text-foreground">Solana Layer (Settlement):</strong></p>
+      <ul className="space-y-1">
+        <li>• Token custody (USDC deposits in program vaults)</li>
+        <li>• Position state storage (encrypted ciphertexts on-chain)</li>
+        <li>• Market PDAs derived from <code className="text-primary bg-muted px-1 rounded">[b"market", market_name.as_bytes()]</code></li>
+        <li>• MPC proof verification before state transitions</li>
+      </ul>
+    </DocSection>
+
+    <DocSection title="Margin Account Model">
+      <p><strong className="text-foreground">Cross-Margin:</strong> VeilX uses a cross-margin model where all deposited collateral backs all open positions. This means a profitable position can offset losses in another, reducing liquidation risk.</p>
+      <p><strong className="text-foreground">Maintenance Margin:</strong> 5% (500 basis points) of total position value. When your margin ratio falls below this, the Arcium MPC triggers liquidation.</p>
+      <p><strong className="text-foreground">Margin Ratio Formula:</strong></p>
+    </DocSection>
+    <CodeBlock title="Margin calculation (runs inside Arcium MPC)" language="text" code={`margin_ratio = (collateral + unrealized_pnl) / total_position_value
+liquidation = margin_ratio < 0.05 (5%)
+
+Example:
+  Collateral: $1,000
+  Position: 10 SOL at $150 (value = $1,500) with 10x leverage
+  Unrealized PnL: -$800
+  Margin Ratio: ($1,000 + (-$800)) / $1,500 = 13.3% → SAFE
+  
+  If PnL drops to -$925:
+  Margin Ratio: ($1,000 + (-$925)) / $1,500 = 5.0% → LIQUIDATION THRESHOLD`} />
+
+    <DocSection title="Position Lifecycle">
+      <p>Every position follows this lifecycle, with privacy maintained at each stage:</p>
+    </DocSection>
+    <div className="rounded-xl border border-border bg-card p-6 mb-8 font-mono text-xs">
+      <pre className="text-muted-foreground whitespace-pre overflow-x-auto">{`
+  ┌──────────┐    ┌──────────────┐    ┌──────────────┐    ┌───────────┐
+  │  OPEN    │───▶│   MONITOR    │───▶│  LIQUIDATE   │───▶│  CLOSED   │
+  │          │    │              │    │  (if needed)  │    │           │
+  │ Encrypt  │    │ MPC checks   │    │ MPC verifies  │    │ PnL       │
+  │ order    │    │ margin every │    │ undercollat.  │    │ revealed  │
+  │ Submit   │    │ block/batch  │    │ Boolean only  │    │ Proof     │
+  └──────────┘    └──────────────┘    └──────────────┘    └───────────┘
+       │                │                    │                  │
+   Encrypted        Encrypted           Boolean only      Only PnL is
+   parameters       health data         returned           public
+`}</pre>
+    </div>
+
     <DocSection title="Arcium MPC Integration">
       <p>Arcium's MPC protocol distributes computation across multiple independent nodes. Each node holds a secret share of the encrypted data, and computations are performed collaboratively without any single node learning the plaintext.</p>
       <p><strong className="text-foreground">Key Properties:</strong></p>
@@ -190,6 +413,13 @@ const ArchitectureTab = () => (
 
     <DocSection title="On-Chain Components">
       <p>The Solana program stores encrypted position data and processes settlement instructions from the MPC network. It verifies MPC proofs before accepting state transitions.</p>
+      <p><strong className="text-foreground">Programs deployed:</strong></p>
+      <ul className="space-y-1">
+        <li>• <strong className="text-foreground">VeilX Core</strong> (<code className="text-primary bg-muted px-1 rounded text-[10px]">DLkXTKQVx422rBrSPJDdZdrJYsYXEnCuGLoucr2Bixnb</code>) — Markets, collateral, settlement</li>
+        <li>• <strong className="text-foreground">MPC Bridge</strong> (<code className="text-primary bg-muted px-1 rounded text-[10px]">DooxjY3g8Xn1PZTSd852aKdnA39HvmpSubphAP2VLYks</code>) — Arcium ↔ Solana communication</li>
+        <li>• <strong className="text-foreground">Liquidation</strong> (<code className="text-primary bg-muted px-1 rounded text-[10px]">Fq4LqoHrk1Ru7oQZ1UaF4bV2njt3VYt4Qikrkrf318eW</code>) — Private liquidation engine</li>
+        <li>• <strong className="text-foreground">Swap</strong> (<code className="text-primary bg-muted px-1 rounded text-[10px]">92Qp1BiRNjVnqL9cYBNXYv4zQCdDzSycJn2Fia9qVBPh</code>) — SOL ↔ USDC AMM</li>
+      </ul>
     </DocSection>
   </>
 );
@@ -1083,12 +1313,12 @@ solana airdrop 2`} />
     <CodeBlock title="Create the mint" language="bash" code={`# Create a new SPL token with 6 decimals (USDC standard)
 spl-token create-token --decimals 6
 
-# ─── Expected output ───
-# Creating token 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU
-# Address:  4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU  ← THIS IS YOUR MINT ADDRESS
+# ─── Expected output (VeilX deployed mint) ───
+# Creating token 3nCh8MyXJtH55BbLFyL1aZYjwjDpbU3rBmFaPLWq85gK
+# Address:  3nCh8MyXJtH55BbLFyL1aZYjwjDpbU3rBmFaPLWq85gK  ← THIS IS YOUR MINT ADDRESS
 # Decimals: 6
 # 
-# Signature: 5KtP...xxxxx
+# Signature: qL9tQmTbszrkdvTxADXJEM53YYwYPtT5LBaJVoLvMkNAFAKFemRMPpx8jAGF6tWdRoMg4DeKha5NUsKRgtmWGqX
 
 # ⚠️ IMPORTANT: Copy the "Address" — this is your VeilX Test USDC mint.
 # You'll use this in every following step.`} />
@@ -1104,8 +1334,8 @@ spl-token create-account <MINT_ADDRESS>
 # Creating account 7Yh3K...xxxxx
 # Signature: 3nBq...xxxxx
 
-# Example with a real address:
-# spl-token create-account 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU`} />
+# Example with the deployed address:
+# spl-token create-account 3nCh8MyXJtH55BbLFyL1aZYjwjDpbU3rBmFaPLWq85gK`} />
 
     <h3 className="text-lg font-semibold text-foreground mb-3 mt-6">Step 3 — Mint Test USDC Tokens</h3>
     <div className="text-sm text-muted-foreground space-y-2 mb-4">
@@ -1135,14 +1365,14 @@ spl-token balance <MINT_ADDRESS>
 spl-token mint <MINT_ADDRESS> 10000 -- <PHANTOM_WALLET_ADDRESS>
 
 # Example:
-# spl-token mint 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU 10000 -- 9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM`} />
+# spl-token mint 3nCh8MyXJtH55BbLFyL1aZYjwjDpbU3rBmFaPLWq85gK 10000 -- 9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM`} />
 
     <h3 className="text-lg font-semibold text-foreground mb-3 mt-6">Step 5 — Update the VeilX Configuration</h3>
     <div className="text-sm text-muted-foreground space-y-2 mb-4">
       <p>Replace the placeholder mint address in the frontend config with your newly created mint:</p>
     </div>
-    <CodeBlock title="src/config/programs.ts" language="typescript" code={`// Replace this placeholder with YOUR mint address from Step 1:
-export const USDC_MINT = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
+    <CodeBlock title="src/config/programs.ts" language="typescript" code={`// VeilX deployed Test USDC mint address:
+export const USDC_MINT = new PublicKey("3nCh8MyXJtH55BbLFyL1aZYjwjDpbU3rBmFaPLWq85gK");
 export const USDC_DECIMALS = 6;`} />
 
     <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 mb-6 text-sm">
@@ -2401,8 +2631,63 @@ const SecurityTab = () => (
       </ul>
     </DocSection>
 
+    <DocSection title="Protocol Risk Parameters">
+      <div className="rounded-xl border border-border bg-card overflow-hidden not-prose mb-4">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-border bg-secondary/30">
+              <th className="text-left p-3 font-medium text-foreground">Parameter</th>
+              <th className="text-left p-3 font-medium text-foreground">Value</th>
+              <th className="text-left p-3 font-medium text-foreground">Description</th>
+            </tr>
+          </thead>
+          <tbody className="text-muted-foreground">
+            <tr className="border-b border-border/50">
+              <td className="p-3 font-mono text-foreground">Max Leverage</td>
+              <td className="p-3 font-mono text-primary">50x</td>
+              <td className="p-3">Maximum leverage across all markets</td>
+            </tr>
+            <tr className="border-b border-border/50">
+              <td className="p-3 font-mono text-foreground">Maintenance Margin</td>
+              <td className="p-3 font-mono text-primary">5% (500 bps)</td>
+              <td className="p-3">Minimum margin ratio before liquidation</td>
+            </tr>
+            <tr className="border-b border-border/50">
+              <td className="p-3 font-mono text-foreground">Liquidation Fee</td>
+              <td className="p-3 font-mono text-primary">2.5% (250 bps)</td>
+              <td className="p-3">Penalty charged on liquidated positions</td>
+            </tr>
+            <tr className="border-b border-border/50">
+              <td className="p-3 font-mono text-foreground">Insurance Share</td>
+              <td className="p-3 font-mono text-primary">50%</td>
+              <td className="p-3">Portion of liquidation fee to insurance fund</td>
+            </tr>
+            <tr className="border-b border-border/50">
+              <td className="p-3 font-mono text-foreground">Funding Rate Cap</td>
+              <td className="p-3 font-mono text-primary">±0.05% / hour</td>
+              <td className="p-3">Maximum funding rate per settlement period</td>
+            </tr>
+            <tr>
+              <td className="p-3 font-mono text-foreground">MPC Threshold</td>
+              <td className="p-3 font-mono text-primary">3-of-5</td>
+              <td className="p-3">Minimum nodes required for computation</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </DocSection>
+
+    <DocSection title="Insurance Fund Mechanics">
+      <p>The insurance fund absorbs losses from undercollateralized liquidations (when a position's deficit exceeds remaining margin).</p>
+      <ul className="space-y-1">
+        <li>• <strong className="text-foreground">Funding:</strong> 50% of all liquidation fees are deposited into the insurance fund.</li>
+        <li>• <strong className="text-foreground">Usage:</strong> When a liquidated position has insufficient collateral to cover the deficit, the insurance fund covers the shortfall.</li>
+        <li>• <strong className="text-foreground">Transparency:</strong> Insurance fund balance is public (needed for market confidence), but individual contributions are encrypted.</li>
+      </ul>
+    </DocSection>
+
     <DocSection title="Attack Vectors Mitigated">
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="rounded-xl border border-border bg-card overflow-hidden not-prose">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-secondary/30">
@@ -2437,6 +2722,47 @@ const SecurityTab = () => (
       </div>
     </DocSection>
 
+    <DocSection title="Emergency Procedures & Circuit Breakers">
+      <p>Hybrid systems require explicit fallback procedures. VeilX defines these safety mechanisms:</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 not-prose">
+        <div className="rounded-xl border border-loss/20 bg-loss/5 p-4 text-sm">
+          <p className="font-semibold text-foreground mb-2">🔴 Arcium Network Unavailable</p>
+          <ul className="text-muted-foreground space-y-1 text-xs">
+            <li>• New position opens are paused</li>
+            <li>• Existing positions remain open (no forced closure)</li>
+            <li>• Withdrawals continue to function (on-chain only)</li>
+            <li>• Funding settlements paused until MPC recovers</li>
+          </ul>
+        </div>
+        <div className="rounded-xl border border-[hsl(var(--warning))]/20 bg-[hsl(var(--warning))]/5 p-4 text-sm">
+          <p className="font-semibold text-foreground mb-2">🟡 High Volatility Mode</p>
+          <ul className="text-muted-foreground space-y-1 text-xs">
+            <li>• Max leverage reduced to 5x</li>
+            <li>• Maintenance margin increased to 10%</li>
+            <li>• Liquidation checks run more frequently</li>
+            <li>• New market orders may be delayed</li>
+          </ul>
+        </div>
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm">
+          <p className="font-semibold text-foreground mb-2">🔵 Liquidation Fallback</p>
+          <ul className="text-muted-foreground space-y-1 text-xs">
+            <li>• If MPC liquidation checks fail, fallback to transparent on-chain logic</li>
+            <li>• Positions exceeding 10x maintenance margin are auto-flagged</li>
+            <li>• Manual governance intervention for edge cases</li>
+          </ul>
+        </div>
+        <div className="rounded-xl border border-profit/20 bg-profit/5 p-4 text-sm">
+          <p className="font-semibold text-foreground mb-2">🟢 Recovery Procedure</p>
+          <ul className="text-muted-foreground space-y-1 text-xs">
+            <li>• MPC cluster reconnects automatically</li>
+            <li>• Pending liquidation checks resume</li>
+            <li>• Missed funding settlements are applied retroactively</li>
+            <li>• Market returns to normal parameters</li>
+          </ul>
+        </div>
+      </div>
+    </DocSection>
+
     <DocSection title="Audit & Best Practices">
       <ul className="space-y-1">
         <li>• All smart contracts should undergo third-party security audits before mainnet deployment.</li>
@@ -2444,6 +2770,8 @@ const SecurityTab = () => (
         <li>• Protocol upgrades require multi-sig governance approval.</li>
         <li>• Insurance fund protects against undercollateralized liquidations.</li>
         <li>• Client-side encryption uses audited cryptographic libraries.</li>
+        <li>• Encrypted payload sizes are padded to fixed lengths to prevent size-based information leakage.</li>
+        <li>• Random delays and batch submissions mitigate timing-based analysis.</li>
       </ul>
     </DocSection>
   </>
