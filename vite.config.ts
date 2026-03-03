@@ -17,8 +17,11 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     nodePolyfills({
-      include: ["buffer"],
-      globals: { Buffer: true },
+      include: ["buffer", "crypto", "stream", "util", "process"],
+      globals: { Buffer: true, process: true },
+      overrides: {
+        fs: "memfs",
+      },
     }),
   ].filter(Boolean),
   resolve: {
