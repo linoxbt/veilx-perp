@@ -4,6 +4,9 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { toast } from "sonner";
 import type { Order } from "@/hooks/useOrders";
+import { useOpenPosition } from "@/hooks/useOpenPosition";
+import { ArciumBadge } from "@/components/ArciumBadge";
+import { EncryptionStatus } from "@/components/EncryptionStatus";
 
 interface OrderFormProps {
   onSubmit: (order: Omit<Order, "id" | "status" | "timestamp" | "entryPrice" | "pnl" | "txSignature">) => Promise<Order>;
@@ -18,7 +21,7 @@ const DEFAULT_SLIPPAGE = 0.1; // 0.1%
 const OrderForm = ({ onSubmit, currentPrice, market }: OrderFormProps) => {
   const { connected } = useWallet();
   const { setVisible } = useWalletModal();
-
+  const { openPosition, status: arciumStatus, error: arciumError, txSig: arciumTxSig } = useOpenPosition();
   const [side, setSide] = useState<"long" | "short">("long");
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [size, setSize] = useState("");
@@ -312,6 +315,10 @@ const OrderForm = ({ onSubmit, currentPrice, market }: OrderFormProps) => {
           </div>
         </div>
       )}
+
+      {/* Arcium MPC Badge & Status */}
+      <ArciumBadge />
+      <EncryptionStatus status={arciumStatus} txSig={arciumTxSig} error={arciumError} />
 
       {/* Encryption notice */}
       <div className="rounded-lg border border-primary/20 bg-primary/5 p-2.5 flex items-start gap-2">
