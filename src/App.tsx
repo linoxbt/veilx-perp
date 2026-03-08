@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import WalletProvider from "@/components/WalletProvider";
 import LoadingScreen from "@/components/LoadingScreen";
+import ChatBot from "@/components/ChatBot";
 import Index from "./pages/Index";
 import TradePage from "./pages/TradePage";
 import PortfolioPage from "./pages/PortfolioPage";
@@ -34,6 +35,7 @@ const App = () => {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
+          <ChatBot />
         </TooltipProvider>
       </WalletProvider>
     </QueryClientProvider>
