@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { TrendingUp, TrendingDown, Wifi, WifiOff } from "lucide-react";
 import { usePriceOracle } from "@/hooks/usePriceOracle";
+import { Zap } from "lucide-react";
 
 const TIMEFRAMES = ["1H", "4H", "1D", "1W"] as const;
 
