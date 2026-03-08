@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Lock, Wallet, Menu, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Lock, Wallet, Menu, X, Sun, Moon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -15,6 +15,22 @@ const NAV_ITEMS = [
 const Header = () => {
   const { connected, publicKey } = useWallet();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("veilx-theme") as "dark" | "light") || "dark";
+    }
+    return "dark";
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === "light") {
+      root.classList.add("light");
+    } else {
+      root.classList.remove("light");
+    }
+    localStorage.setItem("veilx-theme", theme);
+  }, [theme]);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
@@ -37,6 +53,13 @@ const Header = () => {
         </nav>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            aria-label="Toggle theme"
+          >
+            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
           <div className="hidden sm:flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-2 sm:px-2.5 py-1 text-[10px] font-mono text-primary">
             <Lock className="h-3 w-3" />
             <span className="hidden sm:inline">Arcium Secured</span>
