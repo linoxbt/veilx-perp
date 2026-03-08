@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { TrendingUp, TrendingDown, Wifi, WifiOff } from "lucide-react";
 import { usePriceOracle } from "@/hooks/usePriceOracle";
+import { Zap } from "lucide-react";
 
 const TIMEFRAMES = ["1H", "4H", "1D", "1W"] as const;
 
@@ -22,7 +23,7 @@ const MAX_POINTS = 60;
 const PriceChart = () => {
   const [marketIdx, setMarketIdx] = useState(0);
   const [tf, setTf] = useState<typeof TIMEFRAMES[number]>("1H");
-  const { prices, error } = usePriceOracle(2_000);
+  const { prices, error, connected: sseConnected } = usePriceOracle();
   const [data, setData] = useState<Record<string, PricePoint[]>>({});
   const lastPriceRef = useRef<Record<string, number>>({});
 
@@ -176,8 +177,15 @@ const PriceChart = () => {
         <div className="flex items-center gap-2">
           {source === "pyth" ? (
             <span className="flex items-center gap-1">
-              <Wifi className="h-3 w-3 text-profit" />
+              {sseConnected ? (
+                <Zap className="h-3 w-3 text-profit" />
+              ) : (
+                <Wifi className="h-3 w-3 text-profit" />
+              )}
               <span className="text-profit">Pyth Network</span>
+              {sseConnected && (
+                <span className="text-profit/70">SSE</span>
+              )}
               {confidence > 0 && (
                 <span className="text-muted-foreground">± ${confidence.toFixed(2)}</span>
               )}
@@ -192,8 +200,8 @@ const PriceChart = () => {
           )}
         </div>
         <span className="flex items-center gap-1">
-          <span className="h-1.5 w-1.5 rounded-full bg-profit animate-pulse" />
-          Live • {chartData.length} ticks
+          <span className={`h-1.5 w-1.5 rounded-full ${sseConnected ? "bg-profit" : "bg-yellow-500"} animate-pulse`} />
+          {sseConnected ? "Streaming" : "Polling"} • {chartData.length} ticks
         </span>
       </div>
     </div>
