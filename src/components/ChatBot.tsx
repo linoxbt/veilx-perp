@@ -177,14 +177,25 @@ const ChatBot = () => {
       {open && (
         <div className="fixed bottom-24 right-5 z-50 w-[360px] max-h-[520px] rounded-xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-200">
           {/* Header */}
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-muted/50">
-            <img src={veilxLogo} alt="VeilX" className="h-7 w-7 object-contain" />
-            <div>
-              <h3 className="text-sm font-bold text-foreground">VeilX Assistant</h3>
-              <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                <Sparkles className="h-2.5 w-2.5" /> Powered by AI
-              </p>
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/50">
+            <div className="flex items-center gap-3">
+              <img src={veilxLogo} alt="VeilX" className="h-7 w-7 object-contain" />
+              <div>
+                <h3 className="text-sm font-bold text-foreground">VeilX Assistant</h3>
+                <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                  <Sparkles className="h-2.5 w-2.5" /> Powered by AI
+                </p>
+              </div>
             </div>
+            {messages.length > 0 && (
+              <button
+                onClick={() => setMessages([])}
+                className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                title="Clear chat"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
 
           {/* Messages */}
