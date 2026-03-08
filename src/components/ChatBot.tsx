@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MessageCircle, X, Send, Loader2, Bot, User, Sparkles } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, Bot, User, Sparkles, Trash2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import veilxLogo from "@/assets/veilx-logo.png";
 
