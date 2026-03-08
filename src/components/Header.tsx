@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Lock, Wallet, Menu, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Lock, Wallet, Menu, X, Sun, Moon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -15,6 +15,22 @@ const NAV_ITEMS = [
 const Header = () => {
   const { connected, publicKey } = useWallet();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("veilx-theme") as "dark" | "light") || "dark";
+    }
+    return "dark";
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === "light") {
+      root.classList.add("light");
+    } else {
+      root.classList.remove("light");
+    }
+    localStorage.setItem("veilx-theme", theme);
+  }, [theme]);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
