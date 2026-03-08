@@ -16,6 +16,7 @@ const MARKETS = [
   { symbol: "SOL-PERP", base: "SOL", label: "SOL-PERP" },
   { symbol: "ETH-PERP", base: "ETH", label: "ETH-PERP" },
   { symbol: "BTC-PERP", base: "BTC", label: "BTC-PERP" },
+  { symbol: "ARB-PERP", base: "ARB", label: "ARB-PERP" },
 ];
 
 const MAX_POINTS = 60;
