@@ -23,7 +23,7 @@ const MAX_POINTS = 60;
 const PriceChart = () => {
   const [marketIdx, setMarketIdx] = useState(0);
   const [tf, setTf] = useState<typeof TIMEFRAMES[number]>("1H");
-  const { prices, error } = usePriceOracle(2_000);
+  const { prices, error, connected: sseConnected } = usePriceOracle();
   const [data, setData] = useState<Record<string, PricePoint[]>>({});
   const lastPriceRef = useRef<Record<string, number>>({});
 
