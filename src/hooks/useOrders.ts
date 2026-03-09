@@ -91,6 +91,38 @@ export const useOrders = () => {
   const { publicKey, sendTransaction, connected } = useWallet();
   const { connection } = useConnection();
 
+  // Load persisted trades on wallet connect
+  useEffect(() => {
+    if (!publicKey || !connected) return;
+    const wallet = publicKey.toBase58();
+    supabase
+      .from("trades")
+      .select("*")
+      .eq("wallet_address", wallet)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (data?.length) {
+          const mapped: Order[] = data.map((t) => ({
+            id: t.id,
+            side: t.side as "long" | "short",
+            type: t.order_type as "market" | "limit",
+            size: t.size,
+            price: t.entry_price,
+            leverage: t.leverage,
+            stopLoss: t.stop_loss,
+            takeProfit: t.take_profit,
+            market: t.market,
+            status: t.status as Order["status"],
+            timestamp: new Date(t.created_at).getTime(),
+            entryPrice: t.entry_price,
+            pnl: t.pnl ?? 0,
+            txSignature: t.tx_signature ?? undefined,
+          }));
+          setOrders(mapped);
+        }
+      });
+  }, [publicKey, connected]);
+
   const submitOrderOnChain = useCallback(
     async (
       orderParams: Omit<Order, "id" | "status" | "timestamp" | "entryPrice" | "pnl" | "txSignature">
