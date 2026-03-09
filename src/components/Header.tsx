@@ -9,6 +9,7 @@ import veilxLogo from "@/assets/veilx-logo.png";
 const NAV_ITEMS = [
   { to: "/trade", label: "Trade" },
   { to: "/portfolio", label: "Portfolio" },
+  { to: "/leaderboard", label: "Leaderboard" },
   { to: "/docs", label: "Docs" },
 ];
 

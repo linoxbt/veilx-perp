@@ -305,6 +305,17 @@ export const useOrders = () => {
         )
       );
 
+      // Persist close to DB
+      supabase.from("trades").update({
+        status: "closed",
+        pnl: pnlRounded,
+        exit_price: currentPrice,
+        closed_at: new Date().toISOString(),
+        tx_signature: txSignature,
+      }).eq("id", id).then(({ error }) => {
+        if (error) console.warn("Failed to update trade:", error.message);
+      });
+
       return pnlRounded;
     },
     [orders, publicKey, connected, sendTransaction, connection]
