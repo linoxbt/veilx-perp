@@ -1,6 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useConnection } from "@solana/wallet-adapter-react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   PublicKey,
   Transaction,
@@ -90,6 +91,38 @@ export const useOrders = () => {
   const { publicKey, sendTransaction, connected } = useWallet();
   const { connection } = useConnection();
 
+  // Load persisted trades on wallet connect
+  useEffect(() => {
+    if (!publicKey || !connected) return;
+    const wallet = publicKey.toBase58();
+    supabase
+      .from("trades")
+      .select("*")
+      .eq("wallet_address", wallet)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (data?.length) {
+          const mapped: Order[] = data.map((t) => ({
+            id: t.id,
+            side: t.side as "long" | "short",
+            type: t.order_type as "market" | "limit",
+            size: t.size,
+            price: t.entry_price,
+            leverage: t.leverage,
+            stopLoss: t.stop_loss,
+            takeProfit: t.take_profit,
+            market: t.market,
+            status: t.status as Order["status"],
+            timestamp: new Date(t.created_at).getTime(),
+            entryPrice: t.entry_price,
+            pnl: t.pnl ?? 0,
+            txSignature: t.tx_signature ?? undefined,
+          }));
+          setOrders(mapped);
+        }
+      });
+  }, [publicKey, connected]);
+
   const submitOrderOnChain = useCallback(
     async (
       orderParams: Omit<Order, "id" | "status" | "timestamp" | "entryPrice" | "pnl" | "txSignature">
@@ -175,6 +208,27 @@ export const useOrders = () => {
       };
 
       setOrders((prev) => [newOrder, ...prev]);
+
+      // Persist to DB
+      if (publicKey) {
+        supabase.from("trades").insert({
+          id: newOrder.id,
+          wallet_address: publicKey.toBase58(),
+          market: newOrder.market,
+          side: newOrder.side,
+          order_type: newOrder.type,
+          size: newOrder.size,
+          entry_price: newOrder.entryPrice,
+          leverage: newOrder.leverage,
+          stop_loss: newOrder.stopLoss,
+          take_profit: newOrder.takeProfit,
+          status: newOrder.status,
+          tx_signature: newOrder.txSignature ?? null,
+        }).then(({ error }) => {
+          if (error) console.warn("Failed to persist trade:", error.message);
+        });
+      }
+
       return newOrder;
     },
     [publicKey, connected, sendTransaction, connection]
@@ -250,6 +304,17 @@ export const useOrders = () => {
             : o
         )
       );
+
+      // Persist close to DB
+      supabase.from("trades").update({
+        status: "closed",
+        pnl: pnlRounded,
+        exit_price: currentPrice,
+        closed_at: new Date().toISOString(),
+        tx_signature: txSignature,
+      }).eq("id", id).then(({ error }) => {
+        if (error) console.warn("Failed to update trade:", error.message);
+      });
 
       return pnlRounded;
     },
