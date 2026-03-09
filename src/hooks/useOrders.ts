@@ -208,6 +208,27 @@ export const useOrders = () => {
       };
 
       setOrders((prev) => [newOrder, ...prev]);
+
+      // Persist to DB
+      if (publicKey) {
+        supabase.from("trades").insert({
+          id: newOrder.id,
+          wallet_address: publicKey.toBase58(),
+          market: newOrder.market,
+          side: newOrder.side,
+          order_type: newOrder.type,
+          size: newOrder.size,
+          entry_price: newOrder.entryPrice,
+          leverage: newOrder.leverage,
+          stop_loss: newOrder.stopLoss,
+          take_profit: newOrder.takeProfit,
+          status: newOrder.status,
+          tx_signature: newOrder.txSignature ?? null,
+        }).then(({ error }) => {
+          if (error) console.warn("Failed to persist trade:", error.message);
+        });
+      }
+
       return newOrder;
     },
     [publicKey, connected, sendTransaction, connection]
