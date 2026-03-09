@@ -14,10 +14,76 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      trades: {
+        Row: {
+          closed_at: string | null
+          created_at: string
+          entry_price: number
+          exit_price: number | null
+          id: string
+          leverage: number
+          market: string
+          order_type: string
+          pnl: number | null
+          side: string
+          size: number
+          status: string
+          stop_loss: number | null
+          take_profit: number | null
+          tx_signature: string | null
+          wallet_address: string
+        }
+        Insert: {
+          closed_at?: string | null
+          created_at?: string
+          entry_price: number
+          exit_price?: number | null
+          id?: string
+          leverage?: number
+          market: string
+          order_type: string
+          pnl?: number | null
+          side: string
+          size: number
+          status?: string
+          stop_loss?: number | null
+          take_profit?: number | null
+          tx_signature?: string | null
+          wallet_address: string
+        }
+        Update: {
+          closed_at?: string | null
+          created_at?: string
+          entry_price?: number
+          exit_price?: number | null
+          id?: string
+          leverage?: number
+          market?: string
+          order_type?: string
+          pnl?: number | null
+          side?: string
+          size?: number
+          status?: string
+          stop_loss?: number | null
+          take_profit?: number | null
+          tx_signature?: string | null
+          wallet_address?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      leaderboard: {
+        Row: {
+          avg_pnl: number | null
+          last_trade_at: string | null
+          total_pnl: number | null
+          total_trades: number | null
+          wallet_address: string | null
+          winning_trades: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
